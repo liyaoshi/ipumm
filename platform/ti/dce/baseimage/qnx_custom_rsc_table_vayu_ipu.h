@@ -195,7 +195,7 @@ extern char ti_trace_SysMin_Module_State_0_outbuf__A;
 #pragma DATA_ALIGN(ti_ipc_remoteproc_ResourceTable, 4096)
 
 struct my_resource_table ti_ipc_remoteproc_ResourceTable = {
-    2,      /* 2nd version to identify QNX custom resource table */
+    1,      /* Ver is used to differentiate the changes of the resource table format */
     18,     /* number of entries in the table */
     0, 0,   /* reserved, must be zero */
     /* offsets to entries */
