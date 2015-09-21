@@ -1,0 +1,6 @@
+SECTIONS
+{
+% if (this.MPEG2VDEC.dataSection) { 
+    .data  > `this.MPEG2VDEC.dataSection`
+%}
+}

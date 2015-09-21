@@ -1,0 +1,189 @@
+/*
+ * Copyright (c) 2011-2015, Texas Instruments Incorporated
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * *  Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * *  Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * *  Neither the name of Texas Instruments Incorporated nor the names of
+ *    its contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+= About Distributed Codec Engine - RPMSG =
+
+DCE is a library to remotely invoke the hw accellerated codecs on IVA-HD via a
+syslink/rcm shim layer.  This provides access to the
+[http://processors.wiki.ti.com/index.php/Category:Codec_Engine Codec Engine]
+codec interface on the coprocessor (ducati/M3) from the host.
+
+It is similar in purpose to remote codec engine, although at the time RCE was
+not supported on OMAP4430, and DCE was a simple way to get the same result.
+They should be roughly interchangeable from the user's perspective, with the
+caveat that the DCE user should use <code>dce_alloc()</code> and
+<code>dce_free()</code> to allocate/free the control structures that are
+passed by pointer to CE APIs.
+
+DCE was previously used by:
+* [http://git.mansr.com/?p=omapfbplay omapfbplay]
+* [http://github.com/robclark/gst-ducati gst-ducati]
+
+:Note: look in the README file for the latest version of this document, in
+particular for the required versions of various dependent components and tools,
+as these can change over time.
+
+
+= How To Build =
+
+These instructions are assuming you are cross-compiling on a linux machine for
+IPU (M4) coprocessor side and natively building the linux/A9 host side
+(although the instructions for cross-compiling the host side are roughly the
+same).
+
+
+== Building IPU image on the Cortex-M4 Side ==
+
+=== Install TMS470/ARM Compiler ===
+
+Install Code Generation Tools (CGT) from Code Composer Studio which
+provides the compiler tool:
+* http://processors.wiki.ti.com/index.php/Download_CCS
+
+To get the ARM compiler version tool, eg cgtarm-5.2.5, launch CCS,
+Click "Help" - "Install New Software" - On "Work with"
+Select "Code Generation Tools Updates ..."
+NOTE: Unclick the box "show only the latest version of available software"
+otherwise you will not be able to see the previous version.
+Click on left arrow to expand "TI compiler updates" and
+select "ARM Compiler Tools - 5.2.5".
+Click "Next" follow by another "Next" - "Accept the license agreement" - "Finish".
+The CCS will ask the user to restart the complete the installation.
+
+If ccs6 is installed in /opt/ti/ccsv6, then the compiler will get installed in
+/opt/ti/ccsv6/tools/compiler
+
+* Any issue on CCS, please contact the TI e2e forum:
+http://e2e.ti.com/support/development_tools/default.aspx
+
+=== Install XDC tools ===
+
+Download XDC tools from:
+
+* http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/rtsc
+
+Install to ''/opt/ti/xdctools_<version>''
+
+=== Install BIOS ===
+
+Download BIOS (the RTOS) from:
+
+* http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/bios/sysbios/index.html
+
+Install to ''/opt/ti/bios_<version>''
+
+=== Install Codec Engine ===
+
+Download Codec Engine (CE) from:
+
+* http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/ce/
+
+The lite version is fine. Install to ''/opt/ti/codec_engine_<version>''
+
+=== Install Framework Components ===
+
+Download Framework Components (FC) from:
+
+* http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/fc
+
+The lite version without fctools is fine.  Install to ''/opt/ti/framework_components_<version>''
+
+=== Install XDAIS ===
+
+Download XDAIS from:
+
+* http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/xdais/index.html
+
+Untar to ''/opt/ti/xdais_<version>''
+
+
+=== Setup Environment ===
+
+The Project Home Directory (ipumm) host a Makefile.
+the following environment variables need to be exported
+export BIOSTOOLSROOT=<path where all tools are hosted>
+export TIVIDEOTOOLSROOT=<path where FC and CE are installed>. This is optional.
+    If nothing is set, then it is assumed to be same as BIOSTOOLSROOT.
+export IPCSRC=<path where IPC is installed>
+export TMS470CGTOOLPATH=<path to CGTOOL ARM Compiler is installed>
+
+Note: if you are using different version numbers, the paths would have to be
+adjusted accordingly.
+
+=== Build IPC ===
+Download IPC from:
+
+* http://downloads.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/ipc/
+
+Install to ''$HOME/ipc_<version>''
+
+ cd $HOME/ipc_version
+
+Setup environment variables:
+export IPC_INSTALL_DIR=<path where IPC is installed>
+export DEPOT=<path where BIOS and XDC are installed>
+export XDC_INSTALL_DIR=$DEPOT/xdctools_<version>
+export BIOS_INSTALL_DIR=$DEPOT/bios_<version>
+export CGTOOLS_ARM=<path to CGTOOL ARM Compiler is installed>
+
+Build ipc:
+make -ef ipc-bios.mak clean
+make -ef ipc-bios.mak ti.targets.arm.elf.M4=$CGTOOLS_ARM
+
+NOTE: If ''ipc'' is modified, then ''DCE'' needs to be rebuilt.
+
+=== Build DCE ===
+
+For OMAP5:
+export HWVERSION=ES20
+make omap5_smp_config : for OMAP5 platform in SMP BIOS mode
+
+For DRA7XX:
+make vayu_smp_config  : for DRA7XX platform in SMP BIOS mode
+
+make info: shows all the make information.
+make unconfig: clean the configuration setting.
+make tools: shows all the needed tool versions.
+make: builds the complete project.
+With ''vayu_smp_config'', binary dra7xx-m4-ipu2.xem4 and dra7-ipu2-fw.xem4 will
+be generated in current directory.
+With ''omap5_smp_config'', binary omap5-m4-ipu.xem4 will be generated in current directory.
+
+For Linux/Android:
+Copy dra7-ipu2-fw.xem4 to your filesystem.
+Eg. GLSDK target filesystem: /lib/firmware/dra7-ipu2-fw.xem4
+For QNX:
+Copy dra7xx-m4-ipu2.xem4 to your filesystem at /stage/usr/lib/dra7xx-m4-ipu2.xem4
+
+= Useful Links =
+
+= TODO =
