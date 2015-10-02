@@ -417,8 +417,8 @@ function GetVersionTag()
   status = {};
   var verInfo;
   var git_cmd = "git ";
-  var ipc_ver = " IPC 3_40_00_06 ";
-  var ipumm_ver = " MMIP 3_00_09_00 ";
+  var ipc_ver = " IPC 3_40_01_08 ";
+  var ipumm_ver = " MMIP 3_00_09_01 ";
 
   var type_cmd = "type ";
   var flush_cmd = "echo ";
