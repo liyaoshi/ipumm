@@ -33,6 +33,9 @@
 #ifndef __DCE_PRIV_H__
 #define __DCE_PRIV_H__
 #include <ti/utils/osal/trace.h>
+#include <ti/xdais/dm/xdm.h>
+#include <ti/sdo/ce/video3/viddec3.h>
+#include <ti/sdo/ce/video2/videnc2.h>
 
 Bool dce_init(void);
 
@@ -44,6 +47,9 @@ void ivahd_release(void);
 void ivahd_idle_check(void);
 void ivahd_init(uint32_t chipset_id);
 void ivahd_boot();
+
+XDM_DataSyncGetFxn H264E_GetDataFxn(XDM_DataSyncHandle dataSyncHandle, XDM_DataSyncDesc *dataSyncDesc);
+XDM_DataSyncPutFxn H264D_PutDataFxn(XDM_DataSyncHandle dataSyncHandle, XDM_DataSyncDesc *dataSyncDesc);
 
 #ifndef   DIM
 #  define DIM(a) (sizeof((a)) / sizeof((a)[0]))
@@ -80,4 +86,3 @@ typedef struct MemHeader {
 #endif
 
 #endif /* __DCE_PRIV_H__ */
-
