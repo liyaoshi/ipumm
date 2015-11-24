@@ -44,14 +44,13 @@
 #include <ti/pm/IpcPower.h>
 #include <ti/sdo/ce/global/CESettings.h>
 #include <ti/sdo/ce/Engine.h>
-#include <ti/sdo/ce/video3/viddec3.h>
-#include <ti/sdo/ce/video2/videnc2.h>
 #include <ti/sdo/fc/global/FCSettings.h>
 #include <ti/sdo/fc/utils/fcutils.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/hal/Cache.h>
 #include <ti/sysbios/knl/Task.h>
-#include <ti/xdais/dm/xdm.h>
+#include <ti/sysbios/knl/Semaphore.h>
+#include <ti/sysbios/posix/pthread.h>
 #include <xdc/cfg/global.h>
 #include <xdc/runtime/System.h>
 #include <xdc/runtime/Diags.h>
@@ -68,6 +67,8 @@ static uint32_t    suspend_initialised = 0;
 uint32_t           dce_debug = DCE_DEBUG_LEVEL;
 
 #define SERVER_NAME "rpmsg-dce"
+#define CALLBACK_SERVER_NAME "dce-callback"
+
 #define MEMORYSTATS_DEBUG
 /* Each client is based on a unique id from MmServiceMgr which is the connect identity */
 /*   created by IPC per MmRpc_create instances                                         */
@@ -112,8 +113,21 @@ static int videnc2_reloc(VIDDEC3_Handle handle, uint8_t *ptr, uint32_t len);
 
 /* Decoder Server static function declarations */
 static VIDDEC3_Handle viddec3_create(Engine_Handle engine, String name, VIDDEC3_Params *params);
+static XDAS_Int32 viddec3_control(VIDDEC3_Handle codec,VIDDEC3_Cmd id,VIDDEC3_DynamicParams * dynParams,VIDDEC3_Status * status);
 static int viddec3_reloc(VIDDEC3_Handle handle, uint8_t *ptr, uint32_t len);
 
+static pthread_mutex_t sync_process_mutex;
+
+typedef struct {
+    XDM_DataSyncHandle dataSyncHandle;
+    XDM_DataSyncDesc *dataSyncDesc;
+    pthread_mutex_t callback_mutex;
+    pthread_cond_t synch_callback;
+    Uint32 row_mode;
+    Uint32 getdata_ready;
+    Uint32 codec_request;
+    Uint32 putdata_ready;
+} Callback_data;
 
 typedef struct {
     Uint32 mm_serv_id;  /* value of zero means unused */
@@ -121,6 +135,9 @@ typedef struct {
     Engine_Handle engines[NUM_INSTANCE];
     VIDDEC3_Handle decode_codec[NUM_INSTANCE];
     VIDENC2_Handle encode_codec[NUM_INSTANCE];
+    Uint32 codec_id;
+    Callback_data decode_callback[NUM_INSTANCE];
+    Callback_data encode_callback[NUM_INSTANCE];
 } Client;
 static Client clients[NUM_CLIENTS] = {0};
 
@@ -130,6 +147,25 @@ static inline Client * get_client(Uint32 mm_serv_id)
     for (i = 0; i < DIM(clients); i++) {
         if (clients[i].mm_serv_id == mm_serv_id) {
             return &clients[i];
+        }
+    }
+    return NULL;
+}
+
+static inline Client * get_client_instance(Uint32 codec)
+{
+    int i, j;
+
+    for (i = 0; i < DIM(clients); i++) {
+        for (j = 0; j < DIM(clients[i].decode_codec); j++) {
+            if (clients[i].decode_codec[j] == (VIDDEC3_Handle) codec) {
+                DEBUG("Found VIDDEC3 clients[%d] = 0x%x, &clients[%d] = 0x%x", i, clients[i], i, &clients[i]);
+                return &clients[i];
+            }
+            if (clients[i].encode_codec[j] == (VIDENC2_Handle) codec) {
+                DEBUG("Found VIDENC2 clients[%d] = 0x%x, &clients[%d] = 0x%x", i, clients[i], i, &clients[i]);
+                return &clients[i];
+            }
         }
     }
     return NULL;
@@ -151,7 +187,7 @@ static struct {
     },
     [OMAP_DCE_VIDDEC3] =
     {
-        (CreateFxn)viddec3_create,   (ControlFxn)VIDDEC3_control,
+        (CreateFxn)viddec3_create,   (ControlFxn)viddec3_control,
         (ProcessFxn)VIDDEC3_process, (DeleteFxn)VIDDEC3_delete,
         (RelocFxn)viddec3_reloc,
     },
@@ -234,6 +270,22 @@ static XDAS_Int32 getBufferFxnStub(XDM_DataSyncHandle handle, XDM_DataSyncDesc *
 static XDAS_Int32 videnc2_control(VIDENC2_Handle codec, VIDENC2_Cmd id,
                                   VIDENC2_DynamicParams *dynParams, VIDENC2_Status *status)
 {
+    Client* c;
+
+    c = get_client_instance((Uint32) codec);
+    if (c) {
+        int i;
+        for (i = 0; i < DIM(c->encode_codec); i++) {
+            if (c->encode_codec[i] == codec) {
+                if (c->encode_callback[i].row_mode) {
+                    c->encode_callback[i].dataSyncHandle = codec;
+                    dynParams->getDataFxn = (XDM_DataSyncGetFxn) H264E_GetDataFxn;
+                    dynParams->getDataHandle = codec;
+                }
+            }
+        }
+    }
+
     dynParams->getBufferFxn = getBufferFxnStub;
     return (VIDENC2_control(codec, id, dynParams, status));
 }
@@ -283,12 +335,35 @@ static VIDDEC3_Handle viddec3_create(Engine_Handle engine, String name, VIDDEC3_
     return (h);
 }
 
+static XDAS_Int32 viddec3_control(VIDDEC3_Handle codec,VIDDEC3_Cmd id,VIDDEC3_DynamicParams * dynParams,VIDDEC3_Status * status)
+{
+    Client* c;
+
+    c = get_client_instance((Uint32) codec);
+    if (c) {
+        int i;
+        for (i = 0; i < DIM(c->decode_codec); i++) {
+            if (c->decode_codec[i] == codec) {
+                if (c->decode_callback[i].row_mode) {
+                    DEBUG("Check codec 0x%x", codec);
+                    c->decode_callback[i].dataSyncHandle = codec;
+                    dynParams->putDataFxn = (XDM_DataSyncPutFxn) H264D_PutDataFxn;
+                    dynParams->putDataHandle = codec;
+                }
+            }
+        }
+    }
+
+    //dynParams->putBufferFxn = putBufferFxnStub;
+    return (VIDDEC3_control(codec, id, dynParams, status));
+}
+
 static int videnc2_reloc(VIDENC2_Handle handle, uint8_t *ptr, uint32_t len)
 {
     return (-1); // Not implemented
 }
 
-/* needs to be updated when XDM_MOVEBUFS added in XDC tools */
+/* Only valid if XDM_MOVEBUFS added in XDC tools */
 static int viddec3_reloc(VIDDEC3_Handle handle, uint8_t *ptr, uint32_t len)
 {
     return (-1); // Not implemented
@@ -448,6 +523,7 @@ static Int32 dce_register_codec(Uint32 type, Uint32 mm_serv_id, Uint32 codec)
             for( i = 0; i < DIM(c->decode_codec); i++ ) {
                 if( c->decode_codec[i] == NULL ) {
                     c->decode_codec[i] = (VIDDEC3_Handle) codec;
+                    c->codec_id = type;
                     clientIndex = i;
                     DEBUG("registering codec: decode_codec[%d] codec=%p", i, codec);
                     break;
@@ -466,6 +542,7 @@ static Int32 dce_register_codec(Uint32 type, Uint32 mm_serv_id, Uint32 codec)
             for( i = 0; i < DIM(c->encode_codec); i++ ) {
                 if( c->encode_codec[i] == NULL ) {
                     c->encode_codec[i] = (VIDENC2_Handle) codec;
+                    c->codec_id = type;
                     clientIndex = i;
                     DEBUG("registering codec: encode_codec[%d] codec=%p", i, codec);
                     break;
@@ -593,6 +670,7 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
     Uint32           num_params = MmRpc_NUM_PARAMETERS(size);
     void            *codec_handle;
     Int32            ret = 0;
+    Client*          c;
 
 #ifdef MEMORYSTATS_DEBUG
     Memory_Stats    stats;
@@ -623,12 +701,44 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
     ivahd_release();
 
     mm_serv_id = MmServiceMgr_getId();
-    DEBUG("codec_create mm_serv_id 0x%x", mm_serv_id);
+    DEBUG("codec_create codec_handle 0x%x mm_serv_id 0x%x", codec_handle, mm_serv_id);
 
     ret = dce_register_codec(codec_id, mm_serv_id, (Uint32) codec_handle);
     if( ret < 0 ) {
         codec_fxns[codec_id].delete((void *)codec_handle);
         codec_handle = NULL;
+    }
+
+    if ( codec_id == OMAP_DCE_VIDDEC3 ) {
+        DEBUG("codec_create for VIDDEC3 codec_handle 0x%x", codec_handle);
+        if ( ((VIDDEC3_Params*)static_params)->outputDataMode == IVIDEO_NUMROWS ) {
+            c = get_client_instance((Uint32) codec_handle);
+            int i;
+            for (i = 0; i < DIM(c->decode_codec); i++ ) {
+                if (c->decode_codec[i] == codec_handle) {
+                    c->decode_callback[i].row_mode = 1;
+                    pthread_mutex_init(&(c->decode_callback[i].callback_mutex), NULL);
+                    pthread_cond_init(&(c->decode_callback[i].synch_callback), NULL);
+                    DEBUG("codec_create client 0x%x c->decode_callback[%d].callback_mutex 0x%x c->decode_callback[%d].row_mode %d",
+                        c, i, c->decode_callback[i].callback_mutex, i, c->decode_callback[i].row_mode);
+                }
+            }
+        }
+    } else if ( codec_id == OMAP_DCE_VIDENC2 ) {
+        DEBUG("codec_create for VIDENC2 codec_handle 0x%x", codec_handle);
+        if ( ((VIDENC2_Params*)static_params)->inputDataMode == IVIDEO_NUMROWS ) {
+            c = get_client_instance((Uint32) codec_handle);
+            int i;
+            for (i = 0; i < DIM(c->encode_codec); i++ ) {
+                if (c->encode_codec[i] == codec_handle) {
+                    c->encode_callback[i].row_mode = 1;
+                    pthread_mutex_init(&(c->encode_callback[i].callback_mutex), NULL);
+                    pthread_cond_init(&(c->encode_callback[i].synch_callback), NULL);
+                    DEBUG("codec_create client 0x%x c->encode_callback[%d].callback_mutex 0x%x c->encode_callback[%d].row_mode %d",
+                        c, i, c->encode_callback[i].callback_mutex, i, c->encode_callback[i].row_mode);
+                }
+            }
+        }
     }
 
     DEBUG("<< codec_handle=%08x", codec_handle);
@@ -815,14 +925,16 @@ static int codec_process(UInt32 size, UInt32 *data)
         return (-1);
     }
 
+    pthread_mutex_lock(&sync_process_mutex);
+
     dce_inv(inBufs);
     dce_inv(outBufs);
     dce_inv(inArgs);
     dce_inv(outArgs);
 
 
-    DEBUG(">> codec=%p, inBufs=%p, outBufs=%p, inArgs=%p, outArgs=%p codec_id=%d",
-          codec, inBufs, outBufs, inArgs, outArgs, codec_id);
+    DEBUG(">> codec=%p, inBufs=%p, outBufs=%p, inArgs=%p, outArgs=%p codec_id=%d LOCK sync_process_mutex 0x%x",
+          codec, inBufs, outBufs, inArgs, outArgs, codec_id, sync_process_mutex);
 
 #ifdef PSI_KPI
         kpi_before_codec();
@@ -843,6 +955,9 @@ static int codec_process(UInt32 size, UInt32 *data)
     dce_clean(inArgs);
     dce_clean(outArgs);
 
+    DEBUG("codec_process codec=%p UNLOCK sync_process_mutex 0x%x", codec, sync_process_mutex);
+    pthread_mutex_unlock(&sync_process_mutex);
+
     return ((Int32)ret);
 }
 
@@ -857,16 +972,47 @@ static int codec_delete(UInt32 size, UInt32 *data)
     Uint32          codec_id = (Uint32) payload[0].data;
     Uint32          codec    = (Uint32) payload[1].data;
     Uint32          mm_serv_id = 0;
+    Client*          c;
 
 #ifdef MEMORYSTATS_DEBUG
     Memory_Stats    stats;
 #endif
 
-    DEBUG(">> codec_delete");
+    DEBUG(">> codec_delete on codec 0x%x", codec);
 
     if( num_params != 2 ) {
         ERROR("invalid number of params sent");
         return (-1);
+    }
+
+    if ( codec_id == OMAP_DCE_VIDDEC3 ) {
+        DEBUG("codec_delete for VIDDEC3 codec_handle 0x%x", codec);
+        c = get_client_instance((Uint32) codec);
+        int i;
+        for (i = 0; i < DIM(c->decode_codec); i++ ) {
+            if (c->decode_codec[i] == (VIDDEC3_Handle) codec) {
+                if (c->decode_callback[i].row_mode) {
+                    c->decode_callback[i].row_mode = 0;
+                    pthread_mutex_destroy(&(c->decode_callback[i].callback_mutex));
+                    pthread_cond_destroy(&(c->decode_callback[i].synch_callback));
+                }
+                DEBUG("codec_delete client 0x%x c->decode_callback[%d].callback_mutex 0x%x", c, i, c->decode_callback[i].callback_mutex);
+            }
+        }
+    } else if ( codec_id == OMAP_DCE_VIDENC2 ) {
+        DEBUG("codec_delete for VIDENC2 codec_handle 0x%x", codec);
+        c = get_client_instance((Uint32) codec);
+        int i;
+        for (i = 0; i < DIM(c->encode_codec); i++ ) {
+            if (c->encode_codec[i] == (VIDENC2_Handle) codec) {
+                if (c->encode_callback[i].row_mode) {
+                    c->encode_callback[i].row_mode = 0;
+                    pthread_mutex_destroy(&(c->encode_callback[i].callback_mutex));
+                    pthread_cond_destroy(&(c->encode_callback[i].synch_callback));
+                }
+                DEBUG("codec_delete client 0x%x c->encode_callback[%d].callback_mutex 0x%x", c, i, c->encode_callback[i].callback_mutex);
+            }
+        }
     }
 
     codec_fxns[codec_id].delete((void *)codec);
@@ -888,6 +1034,143 @@ static int codec_delete(UInt32 size, UInt32 *data)
 #endif /*PSI_KPI*/
     return (0);
 }
+
+/*
+ * get_DataFxn : Sync/transfer the input data information from MPU side to DCE Server.
+ * DCE Server will pass the information through the IVA-HD callback function:
+ * H264E_GetDataFxn.
+ */
+static int get_DataFxn(UInt32 size, UInt32 *data)
+{
+    MmType_Param   *payload = (MmType_Param *)data;
+    Uint32          num_params = MmRpc_NUM_PARAMETERS(size);
+    XDM_DataSyncHandle          dataSyncHandle = (XDM_DataSyncHandle) payload[0].data;
+    XDM_DataSyncDesc            *dataSyncDesc    = (void *) payload[1].data;
+    Client* c;
+
+    DEBUG(">> get_DataFxn dataSyncHandle 0x%x", dataSyncHandle);
+
+    if( num_params != 2 ) {
+        ERROR("invalid number of params sent");
+        return (-1);
+    }
+
+    dce_inv(dataSyncDesc);
+
+    c = get_client_instance((Uint32) dataSyncHandle);
+    if (c) {
+        int i;
+        for (i = 0; i < DIM(c->encode_codec); i++) {
+            if (c->encode_codec[i] == dataSyncHandle) {
+                pthread_mutex_lock(&(c->encode_callback[i].callback_mutex));
+                c->encode_callback[i].dataSyncHandle = dataSyncHandle;
+                c->encode_callback[i].dataSyncDesc = dataSyncDesc;
+
+                if (c->encode_callback[i].codec_request) {
+                    DEBUG("Case#1 get_DataFxn is received while codec has requested first. Signal the H264E_GetDataFxn to continue.");
+                    pthread_cond_signal(&(c->encode_callback[i].synch_callback));
+                } else {
+                    // We received get_DataFxn from libdce/client, need to hold it until the data
+                    // is consumed by codec through H264E_GetDataFxn before continuing. Otherwise
+                    // we will receive another one since MPU side thinks that the data has been
+                    // consumed by the codec.
+                    c->encode_callback[i].getdata_ready = 1;
+                    DEBUG("Case#2 get_DataFxn is received but codec has not request H264E_GetDataFxn. Wait conditionally.");
+                    pthread_cond_wait(&(c->encode_callback[i].synch_callback), &(c->encode_callback[i].callback_mutex));
+                    DEBUG("Case#2 get_DataFxn finally gets H264E_GetDataFxn, and the data has been consumed, continue.");
+                    c->encode_callback[i].getdata_ready = 0;
+                }
+                pthread_mutex_unlock(&(c->encode_callback[i].callback_mutex));
+            }
+        }
+    }
+
+    dce_clean(dataSyncDesc);
+    return (0);
+}
+
+/*
+ * put_DataFxn : Sync/transfer the output data information from DCE Server to MPU side.
+ * DCE Server will pass the information from the IVA-HD callback function:
+ * H264D_PutDataFxn to MPU side.
+ */
+static int put_DataFxn(UInt32 size, UInt32 *data)
+{
+    MmType_Param   *payload = (MmType_Param *)data;
+    Uint32          num_params = MmRpc_NUM_PARAMETERS(size);
+    XDM_DataSyncHandle          dataSyncHandle = (XDM_DataSyncHandle) payload[0].data;
+    XDM_DataSyncDesc            *dataSyncDesc    = (void *) payload[1].data;
+    Client* c;
+
+    DEBUG(">> put_DataFxn dataSyncHandle 0x%x dataSyncDesc 0x%x", dataSyncHandle, dataSyncDesc);
+
+    if( num_params != 2 ) {
+        ERROR("invalid number of params sent");
+        return (-1);
+    }
+
+    dce_inv(dataSyncDesc);
+
+    c = get_client_instance((Uint32) dataSyncHandle);
+    if (c) {
+        int i;
+        for (i = 0; i < DIM(c->decode_codec); i++) {
+            if (c->decode_codec[i] == dataSyncHandle) {
+                pthread_mutex_lock(&(c->decode_callback[i].callback_mutex));
+                // Found the corresponding entry, check if IVA-HD has already called the callback (codec_request == 1).
+                if (c->decode_callback[i].codec_request) {
+                    DEBUG("Case#1 put_DataFxn is received while codec has requested first. c->decode_callback[%d].callback_mutex 0x%x",
+                        i, c->decode_callback[i].callback_mutex);
+                    DEBUG("Case#1 c->decode_callback[i].dataSyncDesc 0x%x dataSyncDesc 0x%x", c->decode_callback[i].dataSyncDesc, dataSyncDesc);
+                    // Copy the local structure as H264D_PutDataFxn has already stored codec partial decoded data.
+                    dataSyncDesc->size = (c->decode_callback[i].dataSyncDesc)->size;
+                    dataSyncDesc->scatteredBlocksFlag = (c->decode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
+                    dataSyncDesc->baseAddr = (c->decode_callback[i].dataSyncDesc)->baseAddr;
+                    dataSyncDesc->numBlocks = (c->decode_callback[i].dataSyncDesc)->numBlocks;
+                    dataSyncDesc->varBlockSizesFlag = (c->decode_callback[i].dataSyncDesc)->varBlockSizesFlag;
+                    dataSyncDesc->blockSizes = (c->decode_callback[i].dataSyncDesc)->blockSizes;
+
+                    DEBUG("signal the other thread H264D_PutDataFxn to continue");
+                    pthread_cond_signal(&(c->decode_callback[i].synch_callback));
+                } else {
+                    // We received put_DataFxn from libdce/client, need to hold it until the data
+                    // is provided by codec through H264D_PutDataFxn before continuing.
+                    c->decode_callback[i].putdata_ready = 1;
+                    DEBUG("Case#2 put_DataFxn is received but codec has not requested H264D_PutDataFxn. Wait cond. c->decode_callback[%d].callback_mutex 0x%x", i, c->decode_callback[i].callback_mutex);
+                    DEBUG("Case#2 c->decode_callback[i].dataSyncDesc 0x%x dataSyncDesc 0x%x", c->decode_callback[i].dataSyncDesc, dataSyncDesc);
+                    pthread_cond_wait(&(c->decode_callback[i].synch_callback), &(c->decode_callback[i].callback_mutex));
+                    DEBUG("put_DataFxn FINALLY gets H264D_PutDataFxn, and the data has been provided, continue.");
+                    // Copy the local structure as H264D_PutDataFxn has already stored codec partial decoded data to be sent to MPU side.
+                    dataSyncDesc->size = (c->decode_callback[i].dataSyncDesc)->size;
+                    dataSyncDesc->scatteredBlocksFlag = (c->decode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
+                    dataSyncDesc->baseAddr = (c->decode_callback[i].dataSyncDesc)->baseAddr;
+                    dataSyncDesc->numBlocks = (c->decode_callback[i].dataSyncDesc)->numBlocks;
+                    dataSyncDesc->varBlockSizesFlag = (c->decode_callback[i].dataSyncDesc)->varBlockSizesFlag;
+                    dataSyncDesc->blockSizes = (c->decode_callback[i].dataSyncDesc)->blockSizes;
+
+                    c->decode_callback[i].putdata_ready = 0;
+                    // After resetting putdata_ready to 0, this function will return to MPU; we can let the codec callback to continue for more data.
+                    DEBUG("From client dataSyncDesc->size %d ", dataSyncDesc->size);
+                    DEBUG("From client dataSyncDesc->scatteredBlocksFlag %d ", dataSyncDesc->scatteredBlocksFlag);
+                    DEBUG("From client dataSyncDesc->baseAddr %d ", dataSyncDesc->baseAddr);
+                    DEBUG("From client dataSyncDesc->numBlocks %d ", dataSyncDesc->numBlocks);
+                    DEBUG("From client dataSyncDesc->varBlockSizesFlag %d ", dataSyncDesc->varBlockSizesFlag);
+                    DEBUG("From client dataSyncDesc->blockSizes %d ", dataSyncDesc->blockSizes);
+                }
+                pthread_mutex_unlock(&(c->decode_callback[i].callback_mutex));
+            }
+        }
+    }
+
+    dce_clean(dataSyncDesc);
+    return (0);
+}
+
+static int get_BufferFxn(UInt32 size, UInt32 *data)
+{
+    return (0);
+}
+
 
 /* the server create parameters, must be in persistent memory */
 static RcmServer_Params    rpc_Params;
@@ -973,6 +1256,49 @@ static MmType_FxnSigTab    dce_fxnSigTab =
     MmType_NumElem(DCEServer_sigAry), DCEServer_sigAry
 };
 
+/* DCE Callback Server skel function array */
+static RcmServer_FxnDesc    DCECallbackServerFxnAry[] =
+{
+    { "get_DataFxn",     (RcmServer_MsgFxn) get_DataFxn },
+    { "put_DataFxn",     (RcmServer_MsgFxn) put_DataFxn },
+    { "get_BufferFxn",   (RcmServer_MsgFxn) get_BufferFxn }
+};
+
+#define DCECallbackServerFxnAryLen (sizeof(DCECallbackServerFxnAry) / sizeof(DCECallbackServerFxnAry[0]))
+
+static const RcmServer_FxnDescAry    DCECallbackServer_fxnTab =
+{
+    DCECallbackServerFxnAryLen,
+    DCECallbackServerFxnAry
+};
+
+static MmType_FxnSig    DCECallbackServer_sigAry[] =
+{
+    { "get_DataFxn", 3,
+      {
+          { MmType_Dir_Out, MmType_Param_S32, 1 }, // return
+          { MmType_Dir_In, MmType_Param_U32, 1 },
+          { MmType_Dir_Bi, MmType_PtrType(MmType_Param_VOID), 1 }
+      } },
+    { "put_DataFxn", 3,
+      {
+          { MmType_Dir_Out, MmType_Param_S32, 1 }, // return
+          { MmType_Dir_In, MmType_Param_U32, 1 },
+          { MmType_Dir_Bi, MmType_PtrType(MmType_Param_VOID), 1 }
+      } },
+    { "get_BufferFxn", 3,
+      {
+          { MmType_Dir_Out, MmType_Param_S32, 1 }, // return
+          { MmType_Dir_In, MmType_Param_U32, 1 },
+          { MmType_Dir_Bi, MmType_PtrType(MmType_Param_VOID), 1 }
+      } }
+};
+
+static MmType_FxnSigTab    dce_callback_fxnSigTab =
+{
+    MmType_NumElem(DCECallbackServer_sigAry), DCECallbackServer_sigAry
+};
+
 Void dce_SrvDelNotification(Void)
 {
     Client *c;
@@ -993,17 +1319,30 @@ Void dce_SrvDelNotification(Void)
 
         /* delete all codecs first */
         for( i = 0; i < DIM(c->decode_codec); i++ ) {
+            DEBUG("dce_SrvDelNotification: test c->decode_codec[%d] 0x%x", i, c->decode_codec[i]);
             if( c->decode_codec[i] ) {
-                // Do we need to check if IVAHD is used or not before deleting the codec?
-                DEBUG("dce_SrvDelNotification: delete decoder codec handle 0x%x\n", c->decode_codec[i]);
+                DEBUG("dce_SrvDelNotification: delete decoder codec handle 0x%x c->decode_callback[i] 0x%x c->decode_callback[i].row_mode %d\n",
+                    c->decode_codec[i], c->decode_callback[i], c->decode_callback[i].row_mode);
+                if (c->decode_callback[i].row_mode) {
+                    pthread_mutex_destroy(&(c->decode_callback[i].callback_mutex));
+                    pthread_cond_destroy(&(c->decode_callback[i].synch_callback));
+                    c->decode_callback[i].row_mode = 0;
+                }
                 codec_fxns[OMAP_DCE_VIDDEC3].delete((void *)c->decode_codec[i]);
                 c->decode_codec[i] = NULL;
             }
         }
 
         for( i = 0; i < DIM(c->encode_codec); i++ ) {
+            DEBUG("dce_SrvDelNotification: test c->encode_codec[%d] 0x%x", i, c->encode_codec[i]);
             if( c->encode_codec[i] ) {
-                DEBUG("dce_SrvDelNotification: delete encoder codec handle 0x%x\n", c->encode_codec[i]);
+                DEBUG("dce_SrvDelNotification: delete encoder codec handle 0x%x c->encode_callback[i] 0x%x \n",
+                    c->encode_codec[i], c->encode_callback[i]);
+                if (c->encode_callback[i].row_mode) {
+                    pthread_mutex_destroy(&(c->encode_callback[i].callback_mutex));
+                    pthread_cond_destroy(&(c->encode_callback[i].synch_callback));
+                    c->encode_callback[i].row_mode = 0;
+                }
                 codec_fxns[OMAP_DCE_VIDENC2].delete((void *)c->encode_codec[i]);
                 c->encode_codec[i] = NULL;
             }
@@ -1027,6 +1366,15 @@ Void dce_SrvDelNotification(Void)
     DEBUG("dce_SrvDelNotification: COMPLETE exit function \n");
 }
 
+Void dceCallback_SrvDelNotification(Void)
+{
+    System_printf("dceCallback_SrvDelNotification - call dce_SrvDelNotification to clean up\n");
+}
+
+/*
+ * dce_main : main function for dce-server thread.
+ * Registering to MmServiceMgr.
+ */
 static void dce_main(uint32_t arg0, uint32_t arg1)
 {
     int            err = 0;
@@ -1060,7 +1408,6 @@ static void dce_main(uint32_t arg0, uint32_t arg1)
     err = MmServiceMgr_register(SERVER_NAME, &rpc_Params, &dce_fxnSigTab, dce_SrvDelNotification);
     if( err < 0 ) {
         DEBUG("failed to start " SERVER_NAME " \n");
-        //err = -1;
     } else {
         DEBUG(SERVER_NAME " running through MmServiceMgr");
     }
@@ -1073,20 +1420,64 @@ static void dce_main(uint32_t arg0, uint32_t arg1)
 }
 
 /*
+ * dce_callback_main : main function for dce-callback-server thread.
+ * Registering to MmServiceMgr.
+ */
+
+static void dce_callback_main(uint32_t arg0, uint32_t arg1)
+{
+    int            err = 0;
+
+    err = MmServiceMgr_init();  // MmServiceMgr_init() will always return MmServiceMgr_S_SUCCESS.
+
+    // setup the RCM Server create params
+    RcmServer_Params_init(&rpc_Params);
+    rpc_Params.priority = Thread_Priority_ABOVE_NORMAL;
+    rpc_Params.stackSize = 0x1000;
+    rpc_Params.fxns.length = DCECallbackServer_fxnTab.length;
+    rpc_Params.fxns.elem = DCECallbackServer_fxnTab.elem;
+
+    DEBUG("REGISTER %s\n", CALLBACK_SERVER_NAME);
+
+    // Get the Service Manager handle
+    err = MmServiceMgr_register(CALLBACK_SERVER_NAME, &rpc_Params, &dce_callback_fxnSigTab, dceCallback_SrvDelNotification);
+    if( err < 0 ) {
+        DEBUG("failed to start " CALLBACK_SERVER_NAME " \n");
+    } else {
+        DEBUG(CALLBACK_SERVER_NAME " running through MmServiceMgr");
+    }
+
+    MmServiceMgr_exit();
+
+    DEBUG("deleted " CALLBACK_SERVER_NAME);
+
+    return;
+}
+
+
+/*
   * dce init : Startup Function
   */
 Bool dce_init(void)
 {
     Task_Params    params;
+    Task_Params    callback_params;
 
-    INFO("Creating DCE server thread...");
-
+    INFO("Creating DCE server and DCE callbabk server thread...");
 
     /* Create DCE task. */
     Task_Params_init(&params);
     params.instance->name = "dce-server";
     params.priority = Thread_Priority_ABOVE_NORMAL;
     Task_create(dce_main, &params, NULL);
+
+    /* Create DCE callback task. */
+    Task_Params_init(&callback_params);
+    callback_params.instance->name = "dce-callback-server";
+    callback_params.priority = Thread_Priority_ABOVE_NORMAL;
+    Task_create(dce_callback_main, &callback_params, NULL);
+
+    pthread_mutex_init(&sync_process_mutex, NULL);
 
     return (TRUE);
 }
@@ -1098,5 +1489,141 @@ Bool dce_init(void)
 void dce_deinit(void)
 {
     DEBUG("dce_deinit");
+
+    pthread_mutex_destroy(&sync_process_mutex);
 }
 
+/*
+ * H264E_GetDataFxn
+ * This is callback function provided for IVA-HD codec to callback for more input data.
+ * This function syncs with get_DataFxn which handles the required data from the MPU side.
+ * It will continue if DCE Server has received get_DataFxn from MPU side otherwise it will
+ * wait until DCE server receive get_DataFxn.
+ */
+XDM_DataSyncGetFxn H264E_GetDataFxn(XDM_DataSyncHandle dataSyncHandle,
+    XDM_DataSyncDesc *dataSyncDesc)
+{
+    Client* c;
+
+    dce_inv(dataSyncDesc);
+
+    DEBUG("********************H264E_GetDataFxn START*************************** dataSyncHandle 0x%x",
+        dataSyncHandle);
+    c = get_client_instance((Uint32) dataSyncHandle);
+    if (c) {
+        int i;
+        for (i = 0; i < DIM(c->encode_codec); i++) {
+            if (c->encode_codec[i] == dataSyncHandle) {
+                pthread_mutex_lock(&(c->encode_callback[i].callback_mutex));
+                DEBUG("H264E_GetDataFxn dataSyncHandle 0x%x c->encode_callback[%d].callback_mutex 0x%x", dataSyncHandle, i, c->encode_callback[i].callback_mutex);
+                // Check if H264E_GetDataFxn from codec and get_DataFxn from MPU side. Which comes first.
+                if (c->encode_callback[i].getdata_ready) {
+                    // Already have data to be passed to codec
+                    DEBUG("H264E_GetDataFxn Case#2 c->encode_callback[%d].dataSyncHandle 0x%x c->encode_callback[%d].dataSyncDesc 0x%x",
+                    i, c->encode_callback[i].dataSyncHandle, i, c->encode_callback[i].dataSyncDesc);
+                    if (dataSyncHandle == c->encode_callback[i].dataSyncHandle) {
+                        dataSyncDesc->size = (c->encode_callback[i].dataSyncDesc)->size;
+                        dataSyncDesc->scatteredBlocksFlag = (c->encode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
+                        dataSyncDesc->baseAddr = (c->encode_callback[i].dataSyncDesc)->baseAddr;
+                        dataSyncDesc->numBlocks = (c->encode_callback[i].dataSyncDesc)->numBlocks;
+                        dataSyncDesc->varBlockSizesFlag = (c->encode_callback[i].dataSyncDesc)->varBlockSizesFlag;
+                        dataSyncDesc->blockSizes = (c->encode_callback[i].dataSyncDesc)->blockSizes;
+                    }
+
+                    // Order get_DataFxn to continue request to MPU client side for more data as it is currently pending.
+                    pthread_cond_signal(&(c->encode_callback[i].synch_callback));
+                } else {
+                    c->encode_callback[i].codec_request = 1;
+
+                    // Wait until get_DataFxn is received from MPU client side. Need the information to be passed to codec as currently not available.
+                    pthread_cond_wait(&(c->encode_callback[i].synch_callback), &(c->encode_callback[i].callback_mutex));
+
+                    // Once get_DataFxn is received from MPU side continue by providing it to IVA-HD codec.
+                    DEBUG("H264E_GetDataFxn Case#1 c->encode_callback[%d].dataSyncHandle 0x%x c->encode_callback[%d].dataSyncDesc 0x%x",
+                        i, c->encode_callback[i].dataSyncHandle, i, c->encode_callback[i].dataSyncDesc);
+                    if (dataSyncHandle == c->encode_callback[i].dataSyncHandle) {
+                        dataSyncDesc->size = (c->encode_callback[i].dataSyncDesc)->size;
+                        dataSyncDesc->scatteredBlocksFlag = (c->encode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
+                        dataSyncDesc->baseAddr = (c->encode_callback[i].dataSyncDesc)->baseAddr;
+                        dataSyncDesc->numBlocks = (c->encode_callback[i].dataSyncDesc)->numBlocks;
+                        dataSyncDesc->varBlockSizesFlag = (c->encode_callback[i].dataSyncDesc)->varBlockSizesFlag;
+                        dataSyncDesc->blockSizes = (c->encode_callback[i].dataSyncDesc)->blockSizes;
+                    }
+                    c->encode_callback[i].codec_request = 0;
+                }
+                pthread_mutex_unlock(&(c->encode_callback[i].callback_mutex));
+            }
+        }
+    }
+
+    DEBUG("********************H264E_GetDataFxn END*************************** dataSyncHandle 0x%x", dataSyncHandle);
+    dce_clean(dataSyncDesc);
+    return (0);
+}
+
+/*
+ * H264D_PutDataFxn
+ * This is callback function provided for IVA-HD codec to callback for notifying client on partial decoded output.
+ * This function syncs with put_DataFxn which handles passing the data from codec to the MPU side.
+ * Once this callback is received from IVA-HD codec, it will save the codec partial decoded data into local structure
+ * for put_DataFxn to pick up.
+ * If DCE server has already receive put_DataFxn (putdata_ready == 1), then it notifies through semaphore_post to continue.
+ * If DCE server is waiting for put_DataFxn, then it will set codec_request = 1, and wait through semaphore_pend.
+ */
+XDM_DataSyncPutFxn H264D_PutDataFxn(XDM_DataSyncHandle dataSyncHandle,
+    XDM_DataSyncDesc *dataSyncDesc)
+{
+    Client* c;
+
+    dce_inv(dataSyncDesc);
+    DEBUG("********************H264D_PutDataFxn START*************************** dataSyncHandle 0x%x dataSyncDesc->numBlocks %d",
+        dataSyncHandle, dataSyncDesc->numBlocks);
+
+    c = get_client_instance((Uint32) dataSyncHandle);
+    if (c) {
+        int i;
+        for (i = 0; i < DIM(c->decode_codec); i++) {
+            if (c->decode_codec[i] == dataSyncHandle) {
+                pthread_mutex_lock(&(c->decode_callback[i].callback_mutex));
+                DEBUG("H264D_PutDataFxn dataSyncHandle 0x%x c->decode_codec[%d].callback_mutex 0x%x", dataSyncHandle, i, c->decode_callback[i].callback_mutex);
+                // Should be okay to save the data from IVA-HD codec into local structure for put_DataFxn to pick up.
+                if (dataSyncHandle == c->decode_callback[i].dataSyncHandle) {
+                    (c->decode_callback[i].dataSyncDesc)->size = dataSyncDesc->size;
+                    (c->decode_callback[i].dataSyncDesc)->scatteredBlocksFlag = dataSyncDesc->scatteredBlocksFlag;
+                    (c->decode_callback[i].dataSyncDesc)->baseAddr = dataSyncDesc->baseAddr;
+                    (c->decode_callback[i].dataSyncDesc)->numBlocks = dataSyncDesc->numBlocks;
+                    (c->decode_callback[i].dataSyncDesc)->varBlockSizesFlag = dataSyncDesc->varBlockSizesFlag;
+                    (c->decode_callback[i].dataSyncDesc)->blockSizes = dataSyncDesc->blockSizes;
+                    DEBUG("From Codec (c->decode_callback[%d].dataSyncDesc)->size %d ", i, (c->decode_callback[i].dataSyncDesc)->size);
+                    DEBUG("From Codec (c->decode_callback[%d].dataSyncDesc)->scatteredBlocksFlag %d ", i, (c->decode_callback[i].dataSyncDesc)->scatteredBlocksFlag);
+                    DEBUG("From Codec (c->decode_callback[%d].dataSyncDesc)->baseAddr %d ", i, (c->decode_callback[i].dataSyncDesc)->baseAddr);
+                    DEBUG("From Codec (c->decode_callback[%d].dataSyncDesc)->numBlocks %d ", i, (c->decode_callback[i].dataSyncDesc)->numBlocks);
+                    DEBUG("From Codec (c->decode_callback[%d].dataSyncDesc)->varBlockSizesFlag %d ", i, (c->decode_callback[i].dataSyncDesc)->varBlockSizesFlag);
+                    DEBUG("From Codec (c->decode_callback[%d].dataSyncDesc)->blockSizes %d ", i, (c->decode_callback[i].dataSyncDesc)->blockSizes);
+                }
+
+                // Check if put_DataFxn from MPU side has come before H264D_PutDataFxn.
+                if (c->decode_callback[i].putdata_ready) {
+                    // Already receive request from client for partial decoded output information from codec.
+                    // Order put_DataFxn to continue sending codec partial decoded data in the local structure to MPU side.
+                    DEBUG("H264D_PutDataFxn Case#2 c->decode_callback[%d].dataSyncHandle 0x%x c->decode_callback[%d].dataSyncDesc 0x%x",
+                    i, c->decode_callback[i].dataSyncHandle, i, c->decode_callback[i].dataSyncDesc);
+
+                    // After storing the data from codec, send thread signal conditional for put_DataFxn to continue passing the codec data to MPU.
+                    pthread_cond_signal(&(c->decode_callback[i].synch_callback));
+                } else {
+                    // Wait until the put_DataFxn is received from MPU side. Codec has callback with partial decoded data but put_DataFxn is not received yet.
+                    c->decode_callback[i].codec_request = 1;
+                    DEBUG("H264D_PutDataFxn Case#1 wait on pthread_cond_wait c->decode_codec[%d].callback_mutex 0x%x", i, c->decode_callback[i].callback_mutex);
+                    pthread_cond_wait(&(c->decode_callback[i].synch_callback), &(c->decode_callback[i].callback_mutex));
+                    c->decode_callback[i].codec_request = 0;
+                }
+                pthread_mutex_unlock(&(c->decode_callback[i].callback_mutex));
+            }
+        }
+    }
+
+    DEBUG("********************H264D_PutDataFxn END*************************** dataSyncHandle 0x%x", dataSyncHandle);
+    dce_clean(dataSyncDesc);
+    return (0);
+}
