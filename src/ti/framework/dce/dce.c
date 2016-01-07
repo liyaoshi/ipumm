@@ -127,6 +127,7 @@ typedef struct {
     Uint32 getdata_ready;
     Uint32 codec_request;
     Uint32 putdata_ready;
+    Uint32 mpu_crash_indication;
 } Callback_data;
 
 typedef struct {
@@ -279,6 +280,7 @@ static XDAS_Int32 videnc2_control(VIDENC2_Handle codec, VIDENC2_Cmd id,
             if (c->encode_codec[i] == codec) {
                 if (c->encode_callback[i].row_mode) {
                     c->encode_callback[i].dataSyncHandle = codec;
+                    c->encode_callback[i].mpu_crash_indication = FALSE;
                     dynParams->getDataFxn = (XDM_DataSyncGetFxn) H264E_GetDataFxn;
                     dynParams->getDataHandle = codec;
                 }
@@ -347,6 +349,7 @@ static XDAS_Int32 viddec3_control(VIDDEC3_Handle codec,VIDDEC3_Cmd id,VIDDEC3_Dy
                 if (c->decode_callback[i].row_mode) {
                     DEBUG("Check codec 0x%x", codec);
                     c->decode_callback[i].dataSyncHandle = codec;
+                    c->decode_callback[i].mpu_crash_indication = FALSE;
                     dynParams->putDataFxn = (XDM_DataSyncPutFxn) H264D_PutDataFxn;
                     dynParams->putDataHandle = codec;
                 }
@@ -1314,6 +1317,25 @@ Void dce_SrvDelNotification(Void)
     if( c ) {
         DEBUG("cleanup: mm_serv_id=0x%x c=%p c->refs=%d", mm_serv_id, c, c->refs);
 
+        /* For low latency instance, need to trigger the flag to callback function so that it will return full numblock*/
+        for( i = 0; i < DIM(c->decode_codec); i++ ) {
+            //DEBUG("c->decode_callback[%d].row_mode %d", i, c->decode_callback[i].row_mode);
+            if (c->decode_callback[i].row_mode) {
+                DEBUG("Setting c->decode_callback[%d].mpu_crash_indication = TRUE c->decode_codec[%d].callback_mutex 0x%x", i, i, c->decode_callback[i].callback_mutex);
+                c->decode_callback[i].mpu_crash_indication = TRUE;
+                pthread_cond_signal(&(c->decode_callback[i].synch_callback));
+            }
+        }
+
+        for( i = 0; i < DIM(c->encode_codec); i++ ) {
+            //DEBUG("c->encode_callback[%d].row_mode %d", i, c->encode_callback[i].row_mode);
+            if (c->encode_callback[i].row_mode) {
+                DEBUG("Setting c->encode_callback[%d].mpu_crash_indication = TRUE c->encode_codec[%d].callback_mutex 0x%x", i, i, c->encode_callback[i].callback_mutex);
+                c->encode_callback[i].mpu_crash_indication = TRUE;
+                pthread_cond_signal(&(c->encode_callback[i].synch_callback));
+            }
+        }
+
         /* Make sure IVAHD and SL2 are idle before proceeding */
         ivahd_idle_check();
 
@@ -1327,6 +1349,7 @@ Void dce_SrvDelNotification(Void)
                     pthread_mutex_destroy(&(c->decode_callback[i].callback_mutex));
                     pthread_cond_destroy(&(c->decode_callback[i].synch_callback));
                     c->decode_callback[i].row_mode = 0;
+                    c->decode_callback[i].mpu_crash_indication = FALSE;
                 }
                 codec_fxns[OMAP_DCE_VIDDEC3].delete((void *)c->decode_codec[i]);
                 c->decode_codec[i] = NULL;
@@ -1342,6 +1365,7 @@ Void dce_SrvDelNotification(Void)
                     pthread_mutex_destroy(&(c->encode_callback[i].callback_mutex));
                     pthread_cond_destroy(&(c->encode_callback[i].synch_callback));
                     c->encode_callback[i].row_mode = 0;
+                    c->encode_callback[i].mpu_crash_indication = FALSE;
                 }
                 codec_fxns[OMAP_DCE_VIDENC2].delete((void *)c->encode_codec[i]);
                 c->encode_codec[i] = NULL;
@@ -1517,39 +1541,53 @@ XDM_DataSyncGetFxn H264E_GetDataFxn(XDM_DataSyncHandle dataSyncHandle,
                 pthread_mutex_lock(&(c->encode_callback[i].callback_mutex));
                 DEBUG("H264E_GetDataFxn dataSyncHandle 0x%x c->encode_callback[%d].callback_mutex 0x%x", dataSyncHandle, i, c->encode_callback[i].callback_mutex);
                 // Check if H264E_GetDataFxn from codec and get_DataFxn from MPU side. Which comes first.
-                if (c->encode_callback[i].getdata_ready) {
-                    // Already have data to be passed to codec
-                    DEBUG("H264E_GetDataFxn Case#2 c->encode_callback[%d].dataSyncHandle 0x%x c->encode_callback[%d].dataSyncDesc 0x%x",
-                    i, c->encode_callback[i].dataSyncHandle, i, c->encode_callback[i].dataSyncDesc);
-                    if (dataSyncHandle == c->encode_callback[i].dataSyncHandle) {
-                        dataSyncDesc->size = (c->encode_callback[i].dataSyncDesc)->size;
-                        dataSyncDesc->scatteredBlocksFlag = (c->encode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
-                        dataSyncDesc->baseAddr = (c->encode_callback[i].dataSyncDesc)->baseAddr;
-                        dataSyncDesc->numBlocks = (c->encode_callback[i].dataSyncDesc)->numBlocks;
-                        dataSyncDesc->varBlockSizesFlag = (c->encode_callback[i].dataSyncDesc)->varBlockSizesFlag;
-                        dataSyncDesc->blockSizes = (c->encode_callback[i].dataSyncDesc)->blockSizes;
-                    }
-
-                    // Order get_DataFxn to continue request to MPU client side for more data as it is currently pending.
-                    pthread_cond_signal(&(c->encode_callback[i].synch_callback));
+                // Check if MPU has crashed c->encode_callback[i].mpu_crash_indication, if it is then send the highest numBlock to codec so that VIDENC2_process will be returned and IVA back to IDLE.
+                if (c->encode_callback[i].mpu_crash_indication) {
+                    // Since MPU has crashed, need to send the numBlocks to codec so that VIDENC2_process can be returned and IVA back to IDLE.
+                    // Send the numBlocks as expected max value or add functionality to count up to proper numBlocks to be returned to codec.
+                    // Current implementation will send arbitrary value 100 numBlocks (height resolution 1600) which will let codec return the process call and move IVA into IDLE state.
+                    DEBUG("MPU has crashed, send arbitrary numBlocks 100 so that VIDENC2_process will be returned");
+                    dataSyncDesc->size = sizeof(XDM_DataSyncDesc);
+                    dataSyncDesc->scatteredBlocksFlag = 0;
+                    dataSyncDesc->baseAddr = 0;
+                    dataSyncDesc->numBlocks = 100;
+                    dataSyncDesc->varBlockSizesFlag = 0;
+                    dataSyncDesc->blockSizes = 0;
                 } else {
-                    c->encode_callback[i].codec_request = 1;
+                    if (c->encode_callback[i].getdata_ready) {
+                        // Already have data to be passed to codec
+                        DEBUG("H264E_GetDataFxn Case#2 c->encode_callback[%d].dataSyncHandle 0x%x c->encode_callback[%d].dataSyncDesc 0x%x",
+                            i, c->encode_callback[i].dataSyncHandle, i, c->encode_callback[i].dataSyncDesc);
+                        if (dataSyncHandle == c->encode_callback[i].dataSyncHandle) {
+                            dataSyncDesc->size = (c->encode_callback[i].dataSyncDesc)->size;
+                            dataSyncDesc->scatteredBlocksFlag = (c->encode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
+                            dataSyncDesc->baseAddr = (c->encode_callback[i].dataSyncDesc)->baseAddr;
+                            dataSyncDesc->numBlocks = (c->encode_callback[i].dataSyncDesc)->numBlocks;
+                            dataSyncDesc->varBlockSizesFlag = (c->encode_callback[i].dataSyncDesc)->varBlockSizesFlag;
+                            dataSyncDesc->blockSizes = (c->encode_callback[i].dataSyncDesc)->blockSizes;
+                        }
 
-                    // Wait until get_DataFxn is received from MPU client side. Need the information to be passed to codec as currently not available.
-                    pthread_cond_wait(&(c->encode_callback[i].synch_callback), &(c->encode_callback[i].callback_mutex));
+                        // Order get_DataFxn to continue request to MPU client side for more data as it is currently pending.
+                        pthread_cond_signal(&(c->encode_callback[i].synch_callback));
+                    } else {
+                        c->encode_callback[i].codec_request = 1;
 
-                    // Once get_DataFxn is received from MPU side continue by providing it to IVA-HD codec.
-                    DEBUG("H264E_GetDataFxn Case#1 c->encode_callback[%d].dataSyncHandle 0x%x c->encode_callback[%d].dataSyncDesc 0x%x",
-                        i, c->encode_callback[i].dataSyncHandle, i, c->encode_callback[i].dataSyncDesc);
-                    if (dataSyncHandle == c->encode_callback[i].dataSyncHandle) {
-                        dataSyncDesc->size = (c->encode_callback[i].dataSyncDesc)->size;
-                        dataSyncDesc->scatteredBlocksFlag = (c->encode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
-                        dataSyncDesc->baseAddr = (c->encode_callback[i].dataSyncDesc)->baseAddr;
-                        dataSyncDesc->numBlocks = (c->encode_callback[i].dataSyncDesc)->numBlocks;
-                        dataSyncDesc->varBlockSizesFlag = (c->encode_callback[i].dataSyncDesc)->varBlockSizesFlag;
-                        dataSyncDesc->blockSizes = (c->encode_callback[i].dataSyncDesc)->blockSizes;
+                        // Wait until get_DataFxn is received from MPU client side. Need the information to be passed to codec as currently not available.
+                        pthread_cond_wait(&(c->encode_callback[i].synch_callback), &(c->encode_callback[i].callback_mutex));
+
+                        // Once get_DataFxn is received from MPU side continue by providing it to IVA-HD codec.
+                        DEBUG("H264E_GetDataFxn Case#1 c->encode_callback[%d].dataSyncHandle 0x%x c->encode_callback[%d].dataSyncDesc 0x%x",
+                            i, c->encode_callback[i].dataSyncHandle, i, c->encode_callback[i].dataSyncDesc);
+                        if (dataSyncHandle == c->encode_callback[i].dataSyncHandle) {
+                            dataSyncDesc->size = (c->encode_callback[i].dataSyncDesc)->size;
+                            dataSyncDesc->scatteredBlocksFlag = (c->encode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
+                            dataSyncDesc->baseAddr = (c->encode_callback[i].dataSyncDesc)->baseAddr;
+                            dataSyncDesc->numBlocks = (c->encode_callback[i].dataSyncDesc)->numBlocks;
+                            dataSyncDesc->varBlockSizesFlag = (c->encode_callback[i].dataSyncDesc)->varBlockSizesFlag;
+                            dataSyncDesc->blockSizes = (c->encode_callback[i].dataSyncDesc)->blockSizes;
+                        }
+                        c->encode_callback[i].codec_request = 0;
                     }
-                    c->encode_callback[i].codec_request = 0;
                 }
                 pthread_mutex_unlock(&(c->encode_callback[i].callback_mutex));
             }
@@ -1602,21 +1640,24 @@ XDM_DataSyncPutFxn H264D_PutDataFxn(XDM_DataSyncHandle dataSyncHandle,
                     DEBUG("From Codec (c->decode_callback[%d].dataSyncDesc)->blockSizes %d ", i, (c->decode_callback[i].dataSyncDesc)->blockSizes);
                 }
 
-                // Check if put_DataFxn from MPU side has come before H264D_PutDataFxn.
-                if (c->decode_callback[i].putdata_ready) {
-                    // Already receive request from client for partial decoded output information from codec.
-                    // Order put_DataFxn to continue sending codec partial decoded data in the local structure to MPU side.
-                    DEBUG("H264D_PutDataFxn Case#2 c->decode_callback[%d].dataSyncHandle 0x%x c->decode_callback[%d].dataSyncDesc 0x%x",
-                    i, c->decode_callback[i].dataSyncHandle, i, c->decode_callback[i].dataSyncDesc);
+                // If MPU has crashed, there is no way MPU will respond after this. Let codec thinking that MPU has received the numblock. Don't wait, just returned.
+                if (!(c->decode_callback[i].mpu_crash_indication)) {
+                    // MPU is alive. Wait until the put_DataFxn is received from MPU side. Codec has callback with partial decoded data but put_DataFxn is not received yet.
+                    // Check if put_DataFxn from MPU side has come before H264D_PutDataFxn.
+                    if (c->decode_callback[i].putdata_ready) {
+                        // Already receive request from client for partial decoded output information from codec.
+                        // Order put_DataFxn to continue sending codec partial decoded data in the local structure to MPU side.
+                        DEBUG("H264D_PutDataFxn Case#2 c->decode_callback[%d].dataSyncHandle 0x%x c->decode_callback[%d].dataSyncDesc 0x%x",
+                            i, c->decode_callback[i].dataSyncHandle, i, c->decode_callback[i].dataSyncDesc);
 
-                    // After storing the data from codec, send thread signal conditional for put_DataFxn to continue passing the codec data to MPU.
-                    pthread_cond_signal(&(c->decode_callback[i].synch_callback));
-                } else {
-                    // Wait until the put_DataFxn is received from MPU side. Codec has callback with partial decoded data but put_DataFxn is not received yet.
-                    c->decode_callback[i].codec_request = 1;
-                    DEBUG("H264D_PutDataFxn Case#1 wait on pthread_cond_wait c->decode_codec[%d].callback_mutex 0x%x", i, c->decode_callback[i].callback_mutex);
-                    pthread_cond_wait(&(c->decode_callback[i].synch_callback), &(c->decode_callback[i].callback_mutex));
-                    c->decode_callback[i].codec_request = 0;
+                        // After storing the data from codec, send thread signal conditional for put_DataFxn to continue passing the codec data to MPU.
+                        pthread_cond_signal(&(c->decode_callback[i].synch_callback));
+                    } else {
+                        c->decode_callback[i].codec_request = 1;
+                        DEBUG("H264D_PutDataFxn Case#1 wait on pthread_cond_wait c->decode_codec[%d].callback_mutex 0x%x", i, c->decode_callback[i].callback_mutex);
+                        pthread_cond_wait(&(c->decode_callback[i].synch_callback), &(c->decode_callback[i].callback_mutex));
+                        c->decode_callback[i].codec_request = 0;
+                    }
                 }
                 pthread_mutex_unlock(&(c->decode_callback[i].callback_mutex));
             }
