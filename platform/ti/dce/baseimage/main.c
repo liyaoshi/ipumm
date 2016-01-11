@@ -36,19 +36,17 @@
 #include <xdc/runtime/Diags.h>
 #include <xdc/runtime/Error.h>
 
-#include <ti/ipc/MultiProc.h>
 #include <ti/sysbios/BIOS.h>
-#include <ti/sysbios/knl/Task.h>
 #include <ti/ipc/rpmsg/_RPMessage.h>
 #include <ti/ipc/remoteproc/Resource.h>
 
-#include <ti/grcm/RcmTypes.h>
-#include <ti/grcm/RcmServer.h>
-#include <ti/framework/dce/dce_priv.h>
+#include <ti/utils/osal/trace.h>
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include <platform/ti/dce/baselib/ipumm_main.h>
 
 // Include the custom resource table for memory configuration.
 #if (defined VAYU_ES10)
@@ -64,9 +62,6 @@
 extern uint32_t    dce_debug;
 extern Uint32 kpi_control;
 
-/* Legacy function to allow Linux side rpmsg sample tests to work: */
-extern void start_ping_tasks();
-
 static unsigned int SyslinkMemUtils_VirtToPhys(Ptr Addr)
 {
     unsigned int    pa;
@@ -75,14 +70,6 @@ static unsigned int SyslinkMemUtils_VirtToPhys(Ptr Addr)
         return (0);
     }
     return (pa);
-}
-
-void *MEMUTILS_getPhysicalAddr(Ptr vaddr)
-{
-    unsigned int    paddr = SyslinkMemUtils_VirtToPhys(vaddr);
-
-    DEBUG("virtual addr:%x\tphysical addr:%x", vaddr, paddr);
-    return ((void *)paddr);
 }
 
 #pragma DATA_SECTION(ipummversion, ".ipummversion")
@@ -110,23 +97,13 @@ void tools_ShowVersion()
 
     System_printf("Trace level PA 0x%x Trace Level %d\
                    \nTrace Usage: level:[0-4: 0-no trace, 1-err, 2-debug, 3-info, 4-CE,FC,IPC traces] \n\n",
-                  MEMUTILS_getPhysicalAddr(&dce_debug), dce_debug);
-    System_printf("Trace Buffer PA 0x%x kpi_control (PA 0x%x value 0x%x)\n", MEMUTILS_getPhysicalAddr((Ptr)(TRACEBUFADDR)), MEMUTILS_getPhysicalAddr((Ptr)(&kpi_control)), kpi_control);
+                  SyslinkMemUtils_VirtToPhys(&dce_debug), dce_debug);
+    System_printf("Trace Buffer PA 0x%x kpi_control (PA 0x%x value 0x%x)\n", SyslinkMemUtils_VirtToPhys((Ptr)(TRACEBUFADDR)), SyslinkMemUtils_VirtToPhys((Ptr)(&kpi_control)), kpi_control);
 }
 
 int main(int argc, char * *argv)
 {
-    extern void start_load_task(void);
-    UInt16    hostId;
-
-    /* Set up interprocessor notifications */
-    System_printf("%s starting..\n", MultiProc_getName(MultiProc_self()));
-
-    hostId = MultiProc_getId("HOST");
-    RPMessage_init(hostId);
-
-    /* CPU load reporting in the trace. */
-    start_load_task();
+    IPUMM_Main(argc, argv);
 
     /* Dump Tools version */
     tools_ShowVersion();
@@ -135,4 +112,3 @@ int main(int argc, char * *argv)
 
     return (0);
 }
-

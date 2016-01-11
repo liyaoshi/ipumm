@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2011-2015, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,14 +29,62 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*
- *  ======== package.xdc ========
- *
- */
+
+#include <xdc/std.h>
+#include <xdc/cfg/global.h>
+#include <xdc/runtime/System.h>
+#include <xdc/runtime/Diags.h>
+#include <xdc/runtime/Error.h>
+
+#include <ti/ipc/MultiProc.h>
+#include <ti/sysbios/BIOS.h>
+#include <ti/sysbios/knl/Task.h>
+#include <ti/ipc/rpmsg/_RPMessage.h>
+#include <ti/ipc/remoteproc/Resource.h>
+
+#include <ti/grcm/RcmTypes.h>
+#include <ti/grcm/RcmServer.h>
+#include <ti/framework/dce/dce_priv.h>
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 
-/*!
- *  ======== platform.ti.dce.baseimage ========
- */
-package platform.ti.dce.baseimage [1,0,0,0] {
+/* Legacy function to allow Linux side rpmsg sample tests to work: */
+extern void start_ping_tasks();
+
+static unsigned int SyslinkMemUtils_VirtToPhys(Ptr Addr)
+{
+    unsigned int    pa;
+
+    if( !Addr || Resource_virtToPhys((unsigned int) Addr, &pa)) {
+        return (0);
+    }
+    return (pa);
+}
+
+void *MEMUTILS_getPhysicalAddr(Ptr vaddr)
+{
+    unsigned int    paddr = SyslinkMemUtils_VirtToPhys(vaddr);
+
+    DEBUG("virtual addr:%x\tphysical addr:%x", vaddr, paddr);
+    return ((void *)paddr);
+}
+
+int IPUMM_Main(int argc, char * *argv)
+{
+    extern void start_load_task(void);
+    UInt16    hostId;
+
+    /* Set up interprocessor notifications */
+    System_printf("%s starting..\n", MultiProc_getName(MultiProc_self()));
+
+    hostId = MultiProc_getId("HOST");
+    RPMessage_init(hostId);
+
+    /* CPU load reporting in the trace. */
+    start_load_task();
+
+    return (0);
 }

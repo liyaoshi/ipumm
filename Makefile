@@ -62,7 +62,7 @@ export XDCBUILDCFG = $(DUCATIDCEMMSRC)/build/config.bld
 XDCDIST_TREE	= $(REPO)/$(XDCVERSION)
 export XDCROOT	= $(XDCDIST_TREE)
 
-export XDCPATH  = $(BIOSPROD)/packages;$(IPCSRC)/packages;$(CEPROD)/packages;$(FCPROD)/packages;$(XDAISPROD)/packages;$(DUCATIDCEMMSRC)/extrel/ti/ivahd_codecs/packages;$(DUCATIDCEMMSRC)/src;
+export XDCPATH  = $(BIOSPROD)/packages;$(IPCSRC)/packages;$(CEPROD)/packages;$(FCPROD)/packages;$(XDAISPROD)/packages;$(DUCATIDCEMMSRC)/extrel/ti/ivahd_codecs/packages;$(DUCATIDCEMMSRC)/src;$(DUCATIDCEMMSRC);
 
 # Custom settings for build
 JOBS		?= 1
@@ -135,6 +135,7 @@ omap5_smp_config: unconfig
 
 clean: config
 	export XDCARGS=$(MYXDCARGS); \
+	 $(XDCROOT)/xdc --jobs=$(JOBS) clean -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baselib/.; \
 	 $(XDCROOT)/xdc --jobs=$(JOBS) clean -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baseimage/.
 
 build: config
@@ -148,6 +149,7 @@ else ifeq ($(TMS470CGTOOLPATH),)
 	@exit 1
 endif
 	export XDCARGS=$(MYXDCARGS); \
+	$(XDCROOT)/xdc --jobs=$(JOBS) -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baselib/.; \
 	$(XDCROOT)/xdc --jobs=$(JOBS) -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baseimage/.
 
 ducatibin: build

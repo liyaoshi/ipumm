@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2015, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,10 +33,12 @@
  *  ======== package.xdc ========
  *
  */
-
+requires ti.framework.dce;
+requires src.ti.utils;
 
 /*!
- *  ======== platform.ti.dce.baseimage ========
+ *  ======== platform.ti.dce.baselib ========
  */
-package platform.ti.dce.baseimage [1,0,0,0] {
+package platform.ti.dce.baselib [1,0,0,0] {
+    module BASELIB;
 }
