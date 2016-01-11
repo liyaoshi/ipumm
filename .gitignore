@@ -26,9 +26,13 @@ dcetestdec
 .libraries*
 *.mak
 */baseimage/package/
+*/baselib/package/
 platform/ti/dce/baseimage/out/
+platform/ti/dce/baselib/lib/
 bldcfg.mk
 platform/ti/dce/baseimage/package/
+platform/ti/dce/baselib/package/
+platform/ti/dce/baselib/BASELIB.h
 src/ti/framework/dce/lib/
 src/ti/framework/dce/package/
 src/ti/utils/lib/

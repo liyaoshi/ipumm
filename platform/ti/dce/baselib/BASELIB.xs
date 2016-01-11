@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Texas Instruments Incorporated
+ * Copyright (c) 2015, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,14 +29,51 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /*
- *  ======== package.xdc ========
+ *  ======== package.xs ========
  *
  */
 
 
-/*!
- *  ======== platform.ti.dce.baseimage ========
+/*
+ *  ======== init ========
  */
-package platform.ti.dce.baseimage [1,0,0,0] {
+function init()
+{
+    /*
+     * install a SYS/BIOS startup function
+     * it will be called during BIOS_start()
+     */
+    var BIOS = xdc.useModule('ti.sysbios.BIOS');
+}
+
+
+
+/*
+ *  ======== Package.getLibs ========
+ *  This function is called when a program's configuration files are
+ *  being generated and it returns the name of a library appropriate
+ *  for the program's configuration.
+ */
+
+function getLibs(prog)
+{
+    var pkg = "ipu";
+    var commonBld = xdc.loadCapsule("build/common.bld");
+    var dir = xdc.getPackageBase("platform.ti.dce.baselib");
+    var lib = commonBld.commonGetLibs(prog, true, pkg, dir);
+    return lib;
+
+}
+
+/*
+ *  ======== package.close ========
+ */
+function close()
+{
+
+    if (xdc.om.$name != 'cfg') {
+        return;
+    }
 }
