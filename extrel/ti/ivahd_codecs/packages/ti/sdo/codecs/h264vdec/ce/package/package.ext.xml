@@ -10,15 +10,17 @@
         version=""/>
 </imports>
 <references>
-    <package name="xdc.services.intern.cmd"
-        version="1, 0, 0, 0, 1275003755481"
+    <package name="xdc"
+        version="1, 1, 1, 1275003718877"
         providerId="xdccore">
-        <file name="java\package.jar"/>
-    </package>
-    <package name="xdc.services.intern.xsr"
-        version="1, 0, 0, 1275003758055"
-        providerId="xdccore">
-        <file name="java\package.jar"/>
+        <file name="IPackage.xdc"/>
+        <file name="IPackage.xs"/>
+        <file name="om2.xs"/>
+        <file name="package.xs"/>
+        <file name="template.xs"/>
+        <file name="xdc.tci"/>
+        <file name="xmlgen.xs"/>
+        <file name="xmlgen2.xs"/>
     </package>
     <package name="xdc.platform"
         version="1, 0, 1, 0, 1275003732659"
@@ -28,20 +30,38 @@
         <file name="IPeripheral.xdc"/>
         <file name="IPlatform.xdc"/>
     </package>
+    <package name="ti.sdo.codecs.h264vdec"
+        version="1, 0, 0, 1445601137578"
+        providerId="F:/Releases/rtsc/5.0.3">
+        <file name="H264VDEC.xdc"/>
+        <file name="package.xs"/>
+    </package>
+    <package name="xdc.services.global"
+        version="1, 0, 0, 1275003751833"
+        providerId="xdccore">
+        <file name="Clock.xs"/>
+        <file name="Trace.xs"/>
+        <file name="java\package.jar"/>
+    </package>
     <package name="xdc.cfg"
         version="1, 0, 2, 0, 1275003727109"
         providerId="xdccore">
         <file name="Program.xdc"/>
     </package>
-    <package name="xdc.services.intern.gen"
-        version="1, 0, 0, 0, 1275003755582"
+    <package name="xdc.services.spec"
+        version="1, 0, 0, 0, 1275003766499"
         providerId="xdccore">
         <file name="java\package.jar"/>
     </package>
-    <package name="ti.sdo.codecs.h264vdec"
-        version="1, 0, 0, 1427864982187"
-        providerId="G:/chandu_rtsc_packages/h264_dec_rtsc">
-        <file name="H264VDEC.xdc"/>
+    <package name="ti.sdo.ce.video3"
+        version="1, 0, 0, 1313608091228"
+        providerId="codec_engine_3_21_00_19">
+        <file name="IVIDDEC3.xdc"/>
+        <file name="package.xs"/>
+    </package>
+    <package name="ti.sdo.ce.ipc"
+        version="2, 0, 1, 1313544812640"
+        providerId="codec_engine_3_21_00_19">
         <file name="package.xs"/>
     </package>
     <package name="xdc.shelf"
@@ -54,16 +74,15 @@
         <file name="java\tar.jar"/>
         <file name="java\xbean.jar"/>
     </package>
-    <package name="ti.sdo.ce.ipc"
-        version="2, 0, 1, 1313544812640"
-        providerId="codec_engine_3_21_00_19">
-        <file name="package.xs"/>
+    <package name="xdc.services.intern.cmd"
+        version="1, 0, 0, 0, 1275003755481"
+        providerId="xdccore">
+        <file name="java\package.jar"/>
     </package>
-    <package name="ti.sdo.ce.video3"
-        version="1, 0, 0, 1313608091228"
-        providerId="codec_engine_3_21_00_19">
-        <file name="IVIDDEC3.xdc"/>
-        <file name="package.xs"/>
+    <package name="xdc.services.intern.xsr"
+        version="1, 0, 0, 1275003758055"
+        providerId="xdccore">
+        <file name="java\package.jar"/>
     </package>
     <package name="ti.sdo.ce"
         version="1, 0, 6, 1313607868501"
@@ -92,31 +111,12 @@
         <file name="bld.js"/>
         <file name="package.xs"/>
     </package>
-    <package name="xdc"
-        version="1, 1, 1, 1275003718877"
-        providerId="xdccore">
-        <file name="IPackage.xdc"/>
-        <file name="IPackage.xs"/>
-        <file name="om2.xs"/>
-        <file name="package.xs"/>
-        <file name="template.xs"/>
-        <file name="xdc.tci"/>
-        <file name="xmlgen.xs"/>
-        <file name="xmlgen2.xs"/>
-    </package>
-    <package name="xdc.services.spec"
-        version="1, 0, 0, 0, 1275003766499"
+    <package name="xdc.services.intern.gen"
+        version="1, 0, 0, 0, 1275003755582"
         providerId="xdccore">
         <file name="java\package.jar"/>
     </package>
-    <package name="xdc.services.global"
-        version="1, 0, 0, 1275003751833"
-        providerId="xdccore">
-        <file name="Clock.xs"/>
-        <file name="Trace.xs"/>
-        <file name="java\package.jar"/>
-    </package>
-    <xdcRoot base="D:/CCSV4_install/xdctools_3_20_01_42_eng/">
+    <xdcRoot base="E:/ccs4_install/xdctools_3_20_01_42_eng/">
         <file name="/packages/xdc/package.xdc"/>
         <file name="etc\config.bld"/>
         <file name="include\utils.tci"/>
