@@ -29,7 +29,7 @@ function getSects()
 {
     var template = null;
 
-    if (prog.build.target.isa == "v7M" || prog.build.target.isa == "v7M4") {
+    if (Program.build.target.isa == "v7M") {
         template = "ti/sdo/codecs/vc1vdec/link.xdt";
     }
 
