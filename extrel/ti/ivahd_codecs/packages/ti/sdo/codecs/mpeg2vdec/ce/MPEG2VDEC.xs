@@ -20,5 +20,5 @@ function getStackSize(prog)
       + ", running on platform " +  prog.platformName);
     }
 
-    return (12288);
+    return (4096);
 }
