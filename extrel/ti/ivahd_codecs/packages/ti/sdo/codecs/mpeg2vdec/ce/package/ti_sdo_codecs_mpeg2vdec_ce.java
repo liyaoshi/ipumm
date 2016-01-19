@@ -2,7 +2,7 @@
  *  Do not modify this file; it is automatically 
  *  generated and any modifications will be overwritten.
  *
- * @(#) xdc-v49
+ * @(#) xdc-v38
  */
 import java.util.*;
 import org.mozilla.javascript.*;
@@ -11,7 +11,7 @@ import xdc.services.spec.*;
 
 public class ti_sdo_codecs_mpeg2vdec_ce
 {
-    static final String VERS = "@(#) xdc-v49\n";
+    static final String VERS = "@(#) xdc-v38\n";
 
     static final Proto.Elm $$T_Bool = Proto.Elm.newBool();
     static final Proto.Elm $$T_Num = Proto.Elm.newNum();
