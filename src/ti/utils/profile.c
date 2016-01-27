@@ -259,6 +259,14 @@ inline unsigned long get_time_core(int core)
  * This function prevents sleep mode to the L4 WKUPAON_CM
  * register, to avoid large stalls when reading the 32k timer
  ***************************************************************/
+/* Commenting set_WKUPAON() to make sure it isn't used. Need to
+ * investigate if this function is still needed. This code is
+ * attempting to directly access a physical address when only
+ * virtual addresses should be accessed. This function is not
+ * currently called. If we don't need this function, can we
+ * remove it?
+ */
+#if 0
 extern void *MEMUTILS_getPhysicalAddr(Ptr vaddr);
 void set_WKUPAON(int force_restore)
 {
@@ -279,6 +287,7 @@ void set_WKUPAON(int force_restore)
     }
     *(Uint32 *)0xAAE07800 = reg;
 }
+#endif
 
 /***************************************************************
  * PSI_TracePrintf

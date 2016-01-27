@@ -54,9 +54,13 @@
 #include <ti/sdo/fc/ires/hdvicp/hdvicp2.h>
 #include <ti/sdo/fc/ires/hdvicp/hdvicp2.h>
 
+#include <ti/ipc/remoteproc/Resource.h>
+
 //#define MEMORYSTATS_DEBUG
 
 static uint32_t    ivahd_base = 0;
+static uint32_t    ivahd_cm_base = 0;
+static uint32_t    ivahd_config_base = 0;
 
 static uint32_t get_ivahd_base(void)
 {
@@ -70,32 +74,59 @@ static uint32_t get_ivahd_base(void)
     return (ivahd_base);
 }
 
+static uint32_t get_ivahd_cm_base(void)
+{
+    if( !ivahd_cm_base ) {
+        ERROR("Chipset ID not set!");
+
+        while( TRUE ) {
+            asm (" wfi");
+        }
+    }
+    return (ivahd_cm_base);
+}
+
+static uint32_t get_ivahd_config_base(void)
+{
+    if( !ivahd_config_base ) {
+        ERROR("Chipset ID not set!");
+
+        while( TRUE ) {
+            asm (" wfi");
+        }
+    }
+    return (ivahd_config_base);
+}
+
 #define IVAHD_REG(off)            (*(volatile unsigned int *)(get_ivahd_base() + (off)))
 
 #define PM_IVAHD_PWRSTCTRL        IVAHD_REG(0x00)
 #define RM_IVAHD_RSTCTRL          IVAHD_REG(0x10)
 #define RM_IVAHD_RSTST            IVAHD_REG(0x14)
 
+#define IVAHD_CM_REG(off)         (*(volatile unsigned int *)(get_ivahd_cm_base() + (off)))
+
+#if ((defined OMAP5430_ES10) || (defined VAYU_ES10))
+ #define CM_IVAHD_CLKSTCTRL        IVAHD_CM_REG(0x8F00)
+ #define CM_IVAHD_CLKCTRL          IVAHD_CM_REG(0x8F20)
+ #define CM_IVAHD_SL2_CLKCTRL      IVAHD_CM_REG(0x8F28)
 #if (defined OMAP5430_ES10)
- #define CM_IVAHD_CLKSTCTRL        (*(volatile unsigned int *)0xAA008F00)
- #define CM_IVAHD_CLKCTRL          (*(volatile unsigned int *)0xAA008F20)
- #define CM_IVAHD_SL2_CLKCTRL      (*(volatile unsigned int *)0xAA008F28)
- #define CM_DIV_DPLL_IVA           (*(volatile unsigned int *)0xAA0041BC)
- #define IVAHD_CONFIG_REG_BASE     (0xBA000000)
+ #define CM_DIV_DPLL_IVA           IVAHD_CM_REG(0x41BC)
 #elif (defined VAYU_ES10)
- #define CM_IVAHD_CLKSTCTRL        (*(volatile unsigned int *)0x6A008F00)
- #define CM_IVAHD_CLKCTRL          (*(volatile unsigned int *)0x6A008F20)
- #define CM_IVAHD_SL2_CLKCTRL      (*(volatile unsigned int *)0x6A008F28)
- #define CM_DIV_DPLL_IVA           (*(volatile unsigned int *)0x6A0051B0)
- #define IVAHD_CONFIG_REG_BASE     (0x7A000000)
+ #define CM_DIV_DPLL_IVA           IVAHD_CM_REG(0x51B0)
+#else
+ #error Undefined Board Type
+#endif
 #elif (defined OMAP5432_ES20)
- #define CM_IVAHD_CLKSTCTRL        (*(volatile unsigned int *)0xAA009200)
- #define CM_IVAHD_CLKCTRL          (*(volatile unsigned int *)0xAA009220)
- #define CM_IVAHD_SL2_CLKCTRL      (*(volatile unsigned int *)0xAA009228)
- #define CM_DIV_DPLL_IVA           (*(volatile unsigned int *)0xAA0041BC)
- #define IVAHD_CONFIG_REG_BASE     (0xBA000000)
+ #define CM_IVAHD_CLKSTCTRL        IVAHD_CM_REG(0x9200)
+ #define CM_IVAHD_CLKCTRL          IVAHD_CM_REG(0x9220)
+ #define CM_IVAHD_SL2_CLKCTRL      IVAHD_CM_REG(0x9228)
+ #define CM_DIV_DPLL_IVA           IVAHD_CM_REG(0x41BC)
+#else
+ #error Undefined Board Type
 #endif //OMAP5_ES10
 
+#define IVAHD_CONFIG_REG_BASE     (get_ivahd_config_base())
 #define ICONT1_ITCM_BASE          (IVAHD_CONFIG_REG_BASE + 0x08000)
 #define ICONT2_ITCM_BASE          (IVAHD_CONFIG_REG_BASE + 0x18000)
 
@@ -431,6 +462,9 @@ static void freeFxn(IALG_MemRec *memTab, Int numRecs);
 void ivahd_init(uint32_t chipset_id)
 {
     IRES_Status       ret;
+    uint32_t          ivahd_base_pa = 0;
+    uint32_t          ivahd_cm_base_pa = 0;
+    uint32_t          ivahd_config_base_pa = 0;
     IRESMAN_Params    rman_params =
     {
         .size = sizeof(IRESMAN_Params),
@@ -441,27 +475,56 @@ void ivahd_init(uint32_t chipset_id)
 
     switch( chipset_id ) {
         case 0x4430 :
-            ivahd_base = 0xAA306F00;
+            ivahd_base_pa = 0x4A306F00;
             break;
         case 0x4460 :
         case 0x4470 :
-            ivahd_base = 0xAA306F00;
+            ivahd_base_pa = 0x4A306F00;
             break;
         case 0x5430 :
-            ivahd_base = 0xAAE06F00;
+            ivahd_base_pa = 0x4AE06F00;
+            ivahd_cm_base_pa = 0x4A000000;
+            ivahd_config_base_pa = 0x5A000000;
             break;
         case 0x5432 :
-            ivahd_base = 0xAAE07200;
+            ivahd_base_pa = 0x4AE07200;
+            ivahd_cm_base_pa = 0x4A000000;
+            ivahd_config_base_pa = 0x5A000000;
             break;
         case 0x5436 :
-            ivahd_base = 0x6AE06F00;
+            ivahd_base_pa = 0x4AE06F00;
+            ivahd_cm_base_pa = 0x4A000000;
+            ivahd_config_base_pa = 0x5A000000;
             break;
         default :
             ERROR("Invalid chipset-id: %x", chipset_id);
             break;
     }
 
+    if (ivahd_base_pa) {
+        if (Resource_physToVirt(ivahd_base_pa, &ivahd_base)) {
+            ERROR("Unable to get ivahd_base\n");
+            return;
+        }
+    }
+
     DEBUG("ivahd_base=%08x", ivahd_base);
+
+    if (ivahd_cm_base_pa) {
+        if (Resource_physToVirt(ivahd_cm_base_pa, &ivahd_cm_base)) {
+            ERROR("Unable to get ivahd_cm_base\n");
+            return;
+        }
+    }
+
+    DEBUG("ivahd_cm_base=%08x", ivahd_cm_base);
+
+    if (ivahd_config_base_pa) {
+        if (Resource_physToVirt(ivahd_config_base_pa, &ivahd_config_base)) {
+            ERROR("Unable to get ivahd_config_base\n");
+            return;
+        }
+    }
 
     /* bit of a hack.. not sure if there is a better way for this: */
     HDVICP2_PARAMS.resetControlAddress[0] = ivahd_base + 0x10;
