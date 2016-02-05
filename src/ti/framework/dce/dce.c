@@ -114,6 +114,8 @@ static int videnc2_reloc(VIDDEC3_Handle handle, uint8_t *ptr, uint32_t len);
 /* Decoder Server static function declarations */
 static VIDDEC3_Handle viddec3_create(Engine_Handle engine, String name, VIDDEC3_Params *params);
 static XDAS_Int32 viddec3_control(VIDDEC3_Handle codec,VIDDEC3_Cmd id,VIDDEC3_DynamicParams * dynParams,VIDDEC3_Status * status);
+static XDAS_Int32 viddec3_process(VIDDEC3_Handle codec, XDM2_BufDesc *inBufs, XDM2_BufDesc *outBufs, VIDDEC3_InArgs *inArgs, VIDDEC3_OutArgs *outArgs);
+
 static int viddec3_reloc(VIDDEC3_Handle handle, uint8_t *ptr, uint32_t len);
 
 static pthread_mutex_t sync_process_mutex;
@@ -128,6 +130,8 @@ typedef struct {
     Uint32 codec_request;
     Uint32 putdata_ready;
     Uint32 mpu_crash_indication;
+    Uint32 putdata_toclient;
+    Uint32 putData_endprocess;
 } Callback_data;
 
 typedef struct {
@@ -189,7 +193,7 @@ static struct {
     [OMAP_DCE_VIDDEC3] =
     {
         (CreateFxn)viddec3_create,   (ControlFxn)viddec3_control,
-        (ProcessFxn)VIDDEC3_process, (DeleteFxn)VIDDEC3_delete,
+        (ProcessFxn)viddec3_process, (DeleteFxn)VIDDEC3_delete,
         (RelocFxn)viddec3_reloc,
     },
 };
@@ -279,10 +283,12 @@ static XDAS_Int32 videnc2_control(VIDENC2_Handle codec, VIDENC2_Cmd id,
         for (i = 0; i < DIM(c->encode_codec); i++) {
             if (c->encode_codec[i] == codec) {
                 if (c->encode_callback[i].row_mode) {
-                    c->encode_callback[i].dataSyncHandle = codec;
-                    c->encode_callback[i].mpu_crash_indication = FALSE;
-                    dynParams->getDataFxn = (XDM_DataSyncGetFxn) H264E_GetDataFxn;
-                    dynParams->getDataHandle = codec;
+                    if (id == XDM_SETPARAMS) {
+                        c->encode_callback[i].dataSyncHandle = codec;
+                        c->encode_callback[i].mpu_crash_indication = FALSE;
+                        dynParams->getDataFxn = (XDM_DataSyncGetFxn) H264E_GetDataFxn;
+                        dynParams->getDataHandle = codec;
+                    }
                 }
             }
         }
@@ -347,11 +353,13 @@ static XDAS_Int32 viddec3_control(VIDDEC3_Handle codec,VIDDEC3_Cmd id,VIDDEC3_Dy
         for (i = 0; i < DIM(c->decode_codec); i++) {
             if (c->decode_codec[i] == codec) {
                 if (c->decode_callback[i].row_mode) {
-                    DEBUG("Check codec 0x%x", codec);
-                    c->decode_callback[i].dataSyncHandle = codec;
-                    c->decode_callback[i].mpu_crash_indication = FALSE;
-                    dynParams->putDataFxn = (XDM_DataSyncPutFxn) H264D_PutDataFxn;
-                    dynParams->putDataHandle = codec;
+                    DEBUG("Check codec 0x%x control id %d", codec, id);
+                    if (id == XDM_SETPARAMS) {
+                        c->decode_callback[i].dataSyncHandle = codec;
+                        c->decode_callback[i].mpu_crash_indication = FALSE;
+                        dynParams->putDataFxn = (XDM_DataSyncPutFxn) H264D_PutDataFxn;
+                        dynParams->putDataHandle = codec;
+                    }
                 }
             }
         }
@@ -359,6 +367,34 @@ static XDAS_Int32 viddec3_control(VIDDEC3_Handle codec,VIDDEC3_Cmd id,VIDDEC3_Dy
 
     //dynParams->putBufferFxn = putBufferFxnStub;
     return (VIDDEC3_control(codec, id, dynParams, status));
+}
+
+static XDAS_Int32 viddec3_process(VIDDEC3_Handle codec, XDM2_BufDesc *inBufs, XDM2_BufDesc *outBufs, VIDDEC3_InArgs *inArgs, VIDDEC3_OutArgs *outArgs)
+{
+    Client* c;
+    XDAS_Int32 ret;
+
+    c = get_client_instance((Uint32) codec);
+    if (c) {
+        int i;
+        for (i = 0; i < DIM(c->decode_codec); i++) {
+            if (c->decode_codec[i] == codec) {
+                if (c->decode_callback[i].row_mode) {
+                    DEBUG("Codec 0x%x", codec);
+                    c->decode_callback[i].codec_request = 0;
+                    c->decode_callback[i].putdata_toclient = 0;
+                    c->decode_callback[i].putData_endprocess = 0;
+                    ret = VIDDEC3_process(codec, inBufs, outBufs, inArgs, outArgs);
+
+                    // Set flag and signal for put_DataFxn to return.
+                    c->decode_callback[i].putData_endprocess = 1;
+                    pthread_cond_signal(&(c->decode_callback[i].synch_callback));
+                    return (ret);
+                }
+            }
+        }
+    }
+    return (VIDDEC3_process(codec, inBufs, outBufs, inArgs, outArgs));
 }
 
 static int videnc2_reloc(VIDENC2_Handle handle, uint8_t *ptr, uint32_t len)
@@ -1121,7 +1157,8 @@ static int put_DataFxn(UInt32 size, UInt32 *data)
             if (c->decode_codec[i] == dataSyncHandle) {
                 pthread_mutex_lock(&(c->decode_callback[i].callback_mutex));
                 // Found the corresponding entry, check if IVA-HD has already called the callback (codec_request == 1).
-                if (c->decode_callback[i].codec_request) {
+
+                if ((c->decode_callback[i].codec_request) && ((c->decode_callback[i].putdata_toclient) == 0)) {
                     DEBUG("Case#1 put_DataFxn is received while codec has requested first. c->decode_callback[%d].callback_mutex 0x%x",
                         i, c->decode_callback[i].callback_mutex);
                     DEBUG("Case#1 c->decode_callback[i].dataSyncDesc 0x%x dataSyncDesc 0x%x", c->decode_callback[i].dataSyncDesc, dataSyncDesc);
@@ -1133,16 +1170,31 @@ static int put_DataFxn(UInt32 size, UInt32 *data)
                     dataSyncDesc->varBlockSizesFlag = (c->decode_callback[i].dataSyncDesc)->varBlockSizesFlag;
                     dataSyncDesc->blockSizes = (c->decode_callback[i].dataSyncDesc)->blockSizes;
 
-                    DEBUG("signal the other thread H264D_PutDataFxn to continue");
+                    (c->decode_callback[i].putdata_toclient)++;
+                    pthread_mutex_unlock(&(c->decode_callback[i].callback_mutex));
+
+                    dce_clean(dataSyncDesc);
+                    return (0);
+                } else if ((c->decode_callback[i].codec_request) && (c->decode_callback[i].putdata_toclient)) {
+                    // Check if put_data_toclient are set; Otherwise send the data to MPU.
+                    DEBUG("MPU has received the earlier put_DataFxn from codec on 0x%x", c->decode_codec[i]);
+                    (c->decode_callback[i].putdata_toclient)--;
+                    DEBUG("Signal thread H264D_PutDataFxn to continue");
                     pthread_cond_signal(&(c->decode_callback[i].synch_callback));
+                    // After signaling H264D_PutDataFxn, it needs to wait for the new data to be returned by codec.
+                }
+
+                // We received put_DataFxn from client, need to wait for data from codec through H264D_PutDataFxn before continuing
+                c->decode_callback[i].putdata_ready = 1;
+                DEBUG("Case#2 put_DataFxn is received. Wait for H264D_PutDataFxn to come; set putdata_ready = 1 c->decode_callback[%d].callback_mutex 0x%x", i, c->decode_callback[i].callback_mutex);
+                DEBUG("Case#2 c->decode_callback[i].dataSyncDesc 0x%x dataSyncDesc 0x%x", c->decode_callback[i].dataSyncDesc, dataSyncDesc);
+                pthread_cond_wait(&(c->decode_callback[i].synch_callback), &(c->decode_callback[i].callback_mutex));
+
+                DEBUG("put_DataFxn FINALLY gets H264D_PutDataFxn, and the data has been provided, continue.");
+                // Signal is received; check if it is from VIDDEC3_process or from H264D_PutDataFxn
+                if (c->decode_callback[i].putData_endprocess ) {
+                    dataSyncDesc->numBlocks = 0;  // To be returned to MPU side which will be ignored.
                 } else {
-                    // We received put_DataFxn from libdce/client, need to hold it until the data
-                    // is provided by codec through H264D_PutDataFxn before continuing.
-                    c->decode_callback[i].putdata_ready = 1;
-                    DEBUG("Case#2 put_DataFxn is received but codec has not requested H264D_PutDataFxn. Wait cond. c->decode_callback[%d].callback_mutex 0x%x", i, c->decode_callback[i].callback_mutex);
-                    DEBUG("Case#2 c->decode_callback[i].dataSyncDesc 0x%x dataSyncDesc 0x%x", c->decode_callback[i].dataSyncDesc, dataSyncDesc);
-                    pthread_cond_wait(&(c->decode_callback[i].synch_callback), &(c->decode_callback[i].callback_mutex));
-                    DEBUG("put_DataFxn FINALLY gets H264D_PutDataFxn, and the data has been provided, continue.");
                     // Copy the local structure as H264D_PutDataFxn has already stored codec partial decoded data to be sent to MPU side.
                     dataSyncDesc->size = (c->decode_callback[i].dataSyncDesc)->size;
                     dataSyncDesc->scatteredBlocksFlag = (c->decode_callback[i].dataSyncDesc)->scatteredBlocksFlag;
@@ -1150,16 +1202,17 @@ static int put_DataFxn(UInt32 size, UInt32 *data)
                     dataSyncDesc->numBlocks = (c->decode_callback[i].dataSyncDesc)->numBlocks;
                     dataSyncDesc->varBlockSizesFlag = (c->decode_callback[i].dataSyncDesc)->varBlockSizesFlag;
                     dataSyncDesc->blockSizes = (c->decode_callback[i].dataSyncDesc)->blockSizes;
-
-                    c->decode_callback[i].putdata_ready = 0;
-                    // After resetting putdata_ready to 0, this function will return to MPU; we can let the codec callback to continue for more data.
-                    DEBUG("From client dataSyncDesc->size %d ", dataSyncDesc->size);
-                    DEBUG("From client dataSyncDesc->scatteredBlocksFlag %d ", dataSyncDesc->scatteredBlocksFlag);
-                    DEBUG("From client dataSyncDesc->baseAddr %d ", dataSyncDesc->baseAddr);
-                    DEBUG("From client dataSyncDesc->numBlocks %d ", dataSyncDesc->numBlocks);
-                    DEBUG("From client dataSyncDesc->varBlockSizesFlag %d ", dataSyncDesc->varBlockSizesFlag);
-                    DEBUG("From client dataSyncDesc->blockSizes %d ", dataSyncDesc->blockSizes);
                 }
+                c->decode_callback[i].putdata_ready = 0;
+                // After resetting putdata_ready to 0, this function will return to MPU
+                DEBUG("From client dataSyncDesc->size %d ", dataSyncDesc->size);
+                DEBUG("From client dataSyncDesc->scatteredBlocksFlag %d ", dataSyncDesc->scatteredBlocksFlag);
+                DEBUG("From client dataSyncDesc->baseAddr %d ", dataSyncDesc->baseAddr);
+                DEBUG("From client dataSyncDesc->numBlocks %d ", dataSyncDesc->numBlocks);
+                DEBUG("From client dataSyncDesc->varBlockSizesFlag %d ", dataSyncDesc->varBlockSizesFlag);
+                DEBUG("From client dataSyncDesc->blockSizes %d ", dataSyncDesc->blockSizes);
+
+                (c->decode_callback[i].putdata_toclient)++;
                 pthread_mutex_unlock(&(c->decode_callback[i].callback_mutex));
             }
         }
@@ -1319,7 +1372,6 @@ Void dce_SrvDelNotification(Void)
 
         /* For low latency instance, need to trigger the flag to callback function so that it will return full numblock*/
         for( i = 0; i < DIM(c->decode_codec); i++ ) {
-            //DEBUG("c->decode_callback[%d].row_mode %d", i, c->decode_callback[i].row_mode);
             if (c->decode_callback[i].row_mode) {
                 DEBUG("Setting c->decode_callback[%d].mpu_crash_indication = TRUE c->decode_codec[%d].callback_mutex 0x%x", i, i, c->decode_callback[i].callback_mutex);
                 c->decode_callback[i].mpu_crash_indication = TRUE;
@@ -1328,7 +1380,6 @@ Void dce_SrvDelNotification(Void)
         }
 
         for( i = 0; i < DIM(c->encode_codec); i++ ) {
-            //DEBUG("c->encode_callback[%d].row_mode %d", i, c->encode_callback[i].row_mode);
             if (c->encode_callback[i].row_mode) {
                 DEBUG("Setting c->encode_callback[%d].mpu_crash_indication = TRUE c->encode_codec[%d].callback_mutex 0x%x", i, i, c->encode_callback[i].callback_mutex);
                 c->encode_callback[i].mpu_crash_indication = TRUE;
@@ -1572,6 +1623,7 @@ XDM_DataSyncGetFxn H264E_GetDataFxn(XDM_DataSyncHandle dataSyncHandle,
                     } else {
                         c->encode_callback[i].codec_request = 1;
 
+                        DEBUG("H264E_GetDataFxn wait Case#1");
                         // Wait until get_DataFxn is received from MPU client side. Need the information to be passed to codec as currently not available.
                         pthread_cond_wait(&(c->encode_callback[i].synch_callback), &(c->encode_callback[i].callback_mutex));
 
@@ -1624,7 +1676,8 @@ XDM_DataSyncPutFxn H264D_PutDataFxn(XDM_DataSyncHandle dataSyncHandle,
             if (c->decode_codec[i] == dataSyncHandle) {
                 pthread_mutex_lock(&(c->decode_callback[i].callback_mutex));
                 DEBUG("H264D_PutDataFxn dataSyncHandle 0x%x c->decode_codec[%d].callback_mutex 0x%x", dataSyncHandle, i, c->decode_callback[i].callback_mutex);
-                // Should be okay to save the data from IVA-HD codec into local structure for put_DataFxn to pick up.
+                c->decode_callback[i].codec_request = 1;
+                // Save the data from IVA-HD codec into local structure for put_DataFxn to pick up.
                 if (dataSyncHandle == c->decode_callback[i].dataSyncHandle) {
                     (c->decode_callback[i].dataSyncDesc)->size = dataSyncDesc->size;
                     (c->decode_callback[i].dataSyncDesc)->scatteredBlocksFlag = dataSyncDesc->scatteredBlocksFlag;
@@ -1652,13 +1705,16 @@ XDM_DataSyncPutFxn H264D_PutDataFxn(XDM_DataSyncHandle dataSyncHandle,
 
                         // After storing the data from codec, send thread signal conditional for put_DataFxn to continue passing the codec data to MPU.
                         pthread_cond_signal(&(c->decode_callback[i].synch_callback));
+
+                        DEBUG("H264D_PutDataFxn Case#2 wait on pthread_cond_wait");
+                        // After signal put_DataFxn, needs to wait for put_DataFxn return from A15 before returning to codec.
+                        pthread_cond_wait(&(c->decode_callback[i].synch_callback), &(c->decode_callback[i].callback_mutex));
                     } else {
-                        c->decode_callback[i].codec_request = 1;
                         DEBUG("H264D_PutDataFxn Case#1 wait on pthread_cond_wait c->decode_codec[%d].callback_mutex 0x%x", i, c->decode_callback[i].callback_mutex);
                         pthread_cond_wait(&(c->decode_callback[i].synch_callback), &(c->decode_callback[i].callback_mutex));
-                        c->decode_callback[i].codec_request = 0;
                     }
                 }
+                c->decode_callback[i].codec_request = 0;
                 pthread_mutex_unlock(&(c->decode_callback[i].callback_mutex));
             }
         }
