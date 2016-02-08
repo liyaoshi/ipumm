@@ -165,9 +165,9 @@ ipu_tgt.ccOpts.suffix += " -pdew "; //Convert warn to err; Supported in 4.9 vers
 //ipu_tgt.ccOpts.suffix += " --wchar_t=32 ";
 ipu_tgt.ccOpts.suffix  += commonOpts;
 ipu_tgt.lnkOpts.suffix += " -x ";
-ipu_tgt.lnkOpts.prefix += " --retain=.resource_table";
+ipu_tgt.lnkOpts.suffix += " --retain=.resource_table";
 //ipu_tgt.lnkOpts.prefix +=  " --zero_init=off ";
-ipu_tgt.lnkOpts.prefix += " --cinit_compression=off";
+ipu_tgt.lnkOpts.suffix += " --cinit_compression=off";
 ipu_tgt.lnkOpts.prefix += " --diag_suppress=16032 "; //Supress wchar_t warnings
 
 ipu_tgt.platforms = [
