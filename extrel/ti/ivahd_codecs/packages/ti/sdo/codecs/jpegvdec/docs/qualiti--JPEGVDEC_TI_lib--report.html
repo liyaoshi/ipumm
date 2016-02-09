@@ -23,7 +23,7 @@
     </TD>
   </TR>
   <TR>
-    <TD><B>Date</B></TD><TD>Tue Apr 28 2015 18:18:09 GMT+0530 (IST)</TD>
+    <TD><B>Date</B></TD><TD>Fri Jan 22 2016 17:44:37 GMT+0530 (IST)</TD>
   </TR>
 
   <TR>
@@ -229,19 +229,19 @@ Determining compiler info.
 
 Chcking if this library was created with a TI compiler...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none "C:\ti\xdais_6_23\report\jpegvdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "&lt;ti_coff&gt;"
-                   (from "C:\Users\anvesh\AppData\Local\Temp\qualiti_runcmd_4928192509535968283.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_6814211330371752759.sh"
 This library was not  created with a TI compiler.
 
 Attempting to determine library format...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none "C:\ti\xdais_6_23\report\jpegvdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" -E "&lt;.*coff&gt;|&lt;.*elf&gt;"
-                   (from "C:\Users\anvesh\AppData\Local\Temp\qualiti_runcmd_7505724253800870876.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_7160700998097130492.sh"
   &lt;elf&gt;
   &lt;/elf&gt;
 The library is in ELF format.
 
 Attempting to determine the compiler version...
  Running command:&gt; "find.exe" "GCC:" "C:\ti\xdais_6_23\report\jpegvdec_ti_host.lib"|"C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "GCC:"
-                   (from "C:\Users\anvesh\AppData\Local\Temp\qualiti_runcmd_8918665229032874576.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_4021497388662891779.sh"
   FIND: Parameter format not correct
 The compiler is UNKNOWN.
 
@@ -253,7 +253,7 @@ The compiler is UNKNOWN.
 Running test 'XDAIS Rules 8, 9 and 10'
 Extracting names of global symbols defined by the algorithm...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\nm6x.exe" -g "C:\ti\xdais_6_23\report\jpegvdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" " [TBCU] "
-                   (from "C:\Users\anvesh\AppData\Local\Temp\qualiti_runcmd_7621963994513285520.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_1513332902145025742.sh"
   00000000 U HDVICP20_TI_DM_Prepare_SL2_TCM
   00000000 U HDVICP20_TI_DM_Trigger_SL2_TCM
   00000000 U HDVICP20_TI_DM_WaitForData_SL2_TCM
@@ -261,14 +261,14 @@ Extracting names of global symbols defined by the algorithm...
   00000000 U HDVICP20_TI_VDMA_Prepare_Extmem_SL2
   00000000 U HDVICP20_TI_VDMA_Trigger_Extmem_SL2
   00000000 U HDVICP20_TI_VDMA_WaitForData_Extmem_SL2
-  0004096f T JPEGVDEC_TI_Control
-  0004050d T JPEGVDEC_TI_Decode
-  00040505 T JPEGVDEC_TI_activate
-  0003fef1 T JPEGVDEC_TI_allocMemtabs
-  00040411 T JPEGVDEC_TI_deactivate
-  0003ff1b T JPEGVDEC_TI_freeMemtabs
-  0003fd39 T JPEGVDEC_TI_initMemtabs
-  0003fd35 T JPEGVDEC_TI_numMemtabs
+  00000c5b T JPEGVDEC_TI_Control
+  000007f9 T JPEGVDEC_TI_Decode
+  000007f1 T JPEGVDEC_TI_activate
+  000001dd T JPEGVDEC_TI_allocMemtabs
+  000006fd T JPEGVDEC_TI_deactivate
+  00000207 T JPEGVDEC_TI_freeMemtabs
+  00000025 T JPEGVDEC_TI_initMemtabs
+  00000021 T JPEGVDEC_TI_numMemtabs
   00000000 U MEMUTILS_getPhysicalAddr
   00000000 U memcpy
   00000000 U memset
@@ -283,12 +283,12 @@ and that no blacklisted external references are made
 Running test 'XDAIS Rule 12'
 Extracting names of global BSS data symbols...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\nm6x.exe" -g "C:\ti\xdais_6_23\report\jpegvdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" " [BD] "
-                   (from "C:\Users\anvesh\AppData\Local\Temp\qualiti_runcmd_470639525345651690.sh"
-  0003fae4 D JPEGVDEC_TI_DynamicParams
-  00042e18 D JPEGVDEC_TI_IALG
-  00042dc4 D JPEGVDEC_TI_IJPEGVDEC
-  00042df0 D JPEGVDEC_TI_IRES
-  0003fb28 D JPEGVDEC_TI_Static_Params
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_7795275600557941663.sh"
+  000030c0 D JPEGVDEC_TI_DynamicParams
+  00000000 D JPEGVDEC_TI_IALG
+  00000000 D JPEGVDEC_TI_IJPEGVDEC
+  00000000 D JPEGVDEC_TI_IRES
+  00003104 D JPEGVDEC_TI_Static_Params
 Verifying that objects 'JPEGVDEC_TI_IALG' and 'JPEGVDEC_TI_IJPEGVDEC' are defined...
 Data object 'JPEGVDEC_TI_IALG' found.
 Data object 'JPEGVDEC_TI_IJPEGVDEC' found.
@@ -313,8 +313,8 @@ Currently, this test cannot be run on non-TI compiled libraries.
 <PRE>
 Running test 'XDAIS Rules 21, 22'
 Using sectti on ofd output to find static data & program memory requirements...
- Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,sections,header "C:\ti\xdais_6_23\report\jpegvdec_ti_host.lib" | "C:\ti\cg_xml_2.2\bin\sectti.exe"
-                   (from "C:\Users\anvesh\AppData\Local\Temp\qualiti_runcmd_3273302833032148698.sh"
+ Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,sections,header "C:\ti\xdais_6_23\report\jpegvdec_ti_host.lib" | "C:\USER_EDIT_THIS_PATH\cg_xml\bin\sectti.exe"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_3210164206346688491.sh"
   Reading from stdin ...
   ====================================================================
   REPORT FOR LIBRARY: C:/ti/xdais_6_23/report/jpegvdec_ti_host.lib
@@ -326,15 +326,32 @@ Using sectti on ofd output to find static data & program memory requirements...
   ************************************************************
                             Name : Size (dec)  Size (hex)  Type
   ------------------------------ : ----------  ----------  ----
-                           .text :      12432  0x00003090  CODE 
-                          .const :     261396  0x0003fd14  DATA 
-                           .data :        144  0x00000090  DATA 
+                           .text :      12448  0x000030a0  CODE 
+                          .const :        164  0x000000a4  DATA 
+                           .data :         24  0x00000018  DATA 
+          .data:JPEGVDEC_TI_IALG :         36  0x00000024  DATA 
+     .data:JPEGVDEC_TI_IJPEGVDEC :         44  0x0000002c  DATA 
+          .data:JPEGVDEC_TI_IRES :         40  0x00000028  DATA 
+  .const:JPEGVDEC_TI_ICONT1_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT1_LEVEL1_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT1_LEVEL2_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT1_LEVEL3_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT1_LEVEL4_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT2_LEVEL4_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT2_LEVEL3_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT2_LEVEL2_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT2_LEVEL1_DataSect0 :         32  0x00000020  DATA 
+  .const:JPEGVDEC_TI_ICONT2_DataSect0 :         32  0x00000020  DATA 
+           .const:load_data:init :     258292  0x0003f0f4  DATA 
+          .const:.string:$P$T0$1 :        107  0x0000006b  DATA 
+          .const:tableLSEECDCmds :        512  0x00000200  DATA 
+         .const:tableLSECALCCmds :       2048  0x00000800  DATA 
   
   ------------------------------------------------------------
   Totals by section type
   ------------------------------------------------------------
-      Initialized Data :     261540  0x0003fda4
-                  Code :      12432  0x00003090
+      Initialized Data :     261587  0x0003fdd3
+                  Code :      12448  0x000030a0
 
 </PRE>
 <a href="#XDAIS Rules 21, 22">back</a>
@@ -344,7 +361,7 @@ Using sectti on ofd output to find static data & program memory requirements...
 Running test 'XDAIS Rule 25'
 Using ofd output to parse for endianness attribute...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,header "C:\ti\xdais_6_23\report\jpegvdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "&lt;ei_data&gt;"
-                   (from "C:\Users\anvesh\AppData\Local\Temp\qualiti_runcmd_7632274842326671471.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_8969082757178292566.sh"
   &lt;ei_data&gt;ELFDATA2LSB&lt;/ei_data&gt;
 
 </PRE>
