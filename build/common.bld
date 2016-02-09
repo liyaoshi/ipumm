@@ -427,7 +427,7 @@ function GetVersionTag()
   Program.global.ducati_ver_branch = "local";
   ipumm_ver += ipc_ver;
   Program.global.ducati_ver_tag = ipumm_ver;
-  Program.global.ducati_ver_h264d = "H264D-02.00.19.01";
+  Program.global.ducati_ver_h264d = "H264D-02.00.20.01";
   Program.global.ducati_ver_mpeg4d = "MPEG4D-01.00.15.01";
   Program.global.ducati_ver_mpeg2d = "MPEG2D-01.00.15.01";
   Program.global.ducati_ver_vc1d = "VC1D-01.00.02.04";
