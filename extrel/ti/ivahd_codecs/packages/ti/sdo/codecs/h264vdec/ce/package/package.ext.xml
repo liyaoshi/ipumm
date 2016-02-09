@@ -30,12 +30,6 @@
         <file name="IPeripheral.xdc"/>
         <file name="IPlatform.xdc"/>
     </package>
-    <package name="ti.sdo.codecs.h264vdec"
-        version="1, 0, 0, 1445601137578"
-        providerId="F:/Releases/rtsc/5.0.3">
-        <file name="H264VDEC.xdc"/>
-        <file name="package.xs"/>
-    </package>
     <package name="xdc.services.global"
         version="1, 0, 0, 1275003751833"
         providerId="xdccore">
@@ -57,6 +51,12 @@
         version="1, 0, 0, 1313608091228"
         providerId="codec_engine_3_21_00_19">
         <file name="IVIDDEC3.xdc"/>
+        <file name="package.xs"/>
+    </package>
+    <package name="ti.sdo.codecs.h264vdec"
+        version="1, 0, 0, 1453631614804"
+        providerId="F:/Releases/rtsc/503">
+        <file name="H264VDEC.xdc"/>
         <file name="package.xs"/>
     </package>
     <package name="ti.sdo.ce.ipc"

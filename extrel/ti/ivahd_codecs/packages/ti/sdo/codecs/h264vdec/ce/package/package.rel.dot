@@ -12,7 +12,7 @@ digraph dependencies {
     edge [style=solid, color=blue]
     ti_sdo_ce_video3 [shape=record,label="ti.sdo.ce.video3|1, 0, 0", URL="../E:\prashanth_backup\C_Drive\RTSC_GEN_TOOLS\codec_engine_3_21_00_19\packages\ti\sdo\ce\video3\package/package.rel.svg"];
     ti_sdo_codecs_h264vdec_ce -> ti_sdo_ce_video3;
-    ti_sdo_codecs_h264vdec [shape=record,label="ti.sdo.codecs.h264vdec|1, 0, 0", URL="../F:\Releases\rtsc\5.0.3\ti\sdo\codecs\h264vdec\package/package.rel.svg"];
+    ti_sdo_codecs_h264vdec [shape=record,label="ti.sdo.codecs.h264vdec|1, 0, 0", URL="../F:\Releases\rtsc\503\ti\sdo\codecs\h264vdec\package/package.rel.svg"];
     ti_sdo_codecs_h264vdec_ce -> ti_sdo_codecs_h264vdec;
 
     edge [style=solid, color=lightgrey]
@@ -20,7 +20,6 @@ digraph dependencies {
     ti_sdo_codecs_h264vdec_ce -> xdc;
     xdc_platform [shape=record,label="xdc.platform|1, 0, 1, 0", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\platform\package/package.rel.svg"];
     ti_sdo_codecs_h264vdec_ce -> xdc_platform;
-    ti_sdo_codecs_h264vdec_ce -> ti_sdo_codecs_h264vdec;
     xdc_services_global [shape=record,label="xdc.services.global|1, 0, 0", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\services\global\package/package.rel.svg"];
     ti_sdo_codecs_h264vdec_ce -> xdc_services_global;
     xdc_cfg [shape=record,label="xdc.cfg|1, 0, 2, 0", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\cfg\package/package.rel.svg"];
@@ -28,6 +27,7 @@ digraph dependencies {
     xdc_services_spec [shape=record,label="xdc.services.spec|1, 0, 0, 0", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\services\spec\package/package.rel.svg"];
     ti_sdo_codecs_h264vdec_ce -> xdc_services_spec;
     ti_sdo_codecs_h264vdec_ce -> ti_sdo_ce_video3;
+    ti_sdo_codecs_h264vdec_ce -> ti_sdo_codecs_h264vdec;
     ti_sdo_ce_ipc [shape=record,label="ti.sdo.ce.ipc|2, 0, 1", URL="../E:\prashanth_backup\C_Drive\RTSC_GEN_TOOLS\codec_engine_3_21_00_19\packages\ti\sdo\ce\ipc\package/package.rel.svg"];
     ti_sdo_codecs_h264vdec_ce -> ti_sdo_ce_ipc;
     xdc_shelf [shape=record,label="xdc.shelf|1, 0, 0", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\shelf\package/package.rel.svg"];
