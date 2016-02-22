@@ -223,6 +223,8 @@ void ivahd_boot(void)
     while(((CM_IVAHD_CLKSTCTRL) & 0x100) & ~0x100 ) {
         ;
     }
+
+    DEBUG("ivahd_boot() CM_IVAHD_CLKCTRL 0x%x CM_IVAHD_CLKSTCTRL 0x%x", CM_IVAHD_CLKCTRL, CM_IVAHD_CLKSTCTRL);
 }
 
 int ivahd_reset(void *handle, void *iresHandle)
@@ -231,7 +233,8 @@ int ivahd_reset(void *handle, void *iresHandle)
      * Reset IVA HD, SL2 and ICONTs
      */
 
-    DEBUG("Resetting IVAHD...");
+    DEBUG("Resetting IVAHD START CM_IVAHD_CLKCTRL 0x%x CM_IVAHD_CLKSTCTRL 0x%x", CM_IVAHD_CLKCTRL, CM_IVAHD_CLKSTCTRL);
+
 
     /* First put IVA into HW Auto mode */
     CM_IVAHD_CLKSTCTRL |= 0x00000003;
@@ -245,12 +248,27 @@ int ivahd_reset(void *handle, void *iresHandle)
     CM_IVAHD_CLKCTRL = 0x00000000;
     CM_IVAHD_SL2_CLKCTRL = 0x00000000;
 
-    /* Ensure that IVAHD and SL2 are disabled */
+    /* Ensure that IVAHD and SL2 are enabled */
     while( !(CM_IVAHD_CLKCTRL & 0x00030000)) {
         ;
     }
 
     while( !(CM_IVAHD_SL2_CLKCTRL & 0x00030000)) {
+        ;
+    }
+
+    /* Precondition - TRM DRA7xx Sec. 3.5.6.5 IVA Subsystem Software Warm Reset Sequence
+     * 1. IVA Sequencer CPUS are in IDLE state: CM_IVAHD_CLKCTRL[17:16] IDLEST - has a value 0x2.
+     * 2. IVA subsystem is in STANDBY state: CM_IVAHD_CLKCTRL[18] STBYST - has a value of 0x1.
+     */
+    while( !(CM_IVAHD_CLKCTRL & 0x00060000) ) {
+        ;
+    }
+
+    /* 3. The functional clock to the IVA subsystem has been gated by the PRCM module
+     * CM_IVA_CLKSTCTRL[8] - has a value of 0x0
+     */
+    while( CM_IVAHD_CLKSTCTRL & 0x100) {
         ;
     }
 
@@ -288,8 +306,48 @@ int ivahd_reset(void *handle, void *iresHandle)
         ;
     }
 
+    DEBUG("Resetting IVAHD COMPLETED");
     return (TRUE);
 }
+
+void crash_reset() {
+    ERROR("Received crash_reset");
+
+    IRES_Status ret;
+
+    /* RMAN_unregister IRESMAN_TILEDMEMORY */
+    ret = RMAN_unregister(&IRESMAN_TILEDMEMORY);
+    if( ret != IRES_OK ) {
+        ERROR("RMAN_unregister on IRESMAN_TILEDMEMORY fail with ret %d", ret);
+    }
+
+    /* RMAN_unregister IRESMAN_HDVICP */
+    ret = RMAN_unregister(&IRESMAN_HDVICP);
+    if( ret != IRES_OK ) {
+        ERROR("RMAN_unregister on IRESMAN_HDVICP fail with ret %d", ret);
+    }
+
+    /* RMAN_exit */
+    ret = RMAN_exit();
+    if( ret != IRES_OK ) {
+        ERROR("RMAN_exit fail with ret %d", ret);
+    }
+
+    CERuntime_exit();
+
+    ERROR("crash_reset() CM_IVAHD_CLKCTRL 0x%x CM_IVAHD_CLKSTCTRL 0x%x", CM_IVAHD_CLKCTRL, CM_IVAHD_CLKSTCTRL);
+
+    if( CM_IVAHD_CLKSTCTRL & 0x100 ) {
+        ERROR("crash_report detects IVA_GCLK is running or gate transition on-going");
+    }
+
+    /* RESET RST_LOGIC, RST_SEQ2, and RST_SEQ1 before crashing */
+    RM_IVAHD_RSTCTRL = 0x00000007;
+
+    ERROR("crash_reset() RM_IVAHD_RSTCTRL 0x%x - calling abort NOW", RM_IVAHD_RSTCTRL);
+    abort();
+}
+
 
 static int    ivahd_use_cnt = 0;
 

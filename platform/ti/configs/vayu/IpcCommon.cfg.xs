@@ -38,6 +38,7 @@ var System      = xdc.useModule('xdc.runtime.System');
 var SysMin      = xdc.useModule('ti.trace.SysMin');
 System.SupportProxy = SysMin;
 SysMin.bufSize  = 0x8000;
+System.abortFxn = "&crash_reset";
 
 /* Define default memory heap properties */
 var Memory      = xdc.useModule('xdc.runtime.Memory');
