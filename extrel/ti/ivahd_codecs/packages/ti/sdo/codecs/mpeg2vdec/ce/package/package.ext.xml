@@ -89,8 +89,8 @@
         <file name="package.xs"/>
     </package>
     <package name="ti.sdo.codecs.mpeg2vdec"
-        version="1, 0, 0, 1452782206112"
-        providerId="E:/release/rtsc_503">
+        version="1, 0, 0, 1455116582876"
+        providerId="F:/Releases/rtsc/503">
         <file name="MPEG2VDEC.xdc"/>
         <file name="package.xs"/>
     </package>
