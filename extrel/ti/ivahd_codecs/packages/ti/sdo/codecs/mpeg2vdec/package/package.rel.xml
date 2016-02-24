@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--  This file conforms to the DTD xdc/bld/release.dtd -->
-<release name="ti_sdo_codecs_mpeg2vdec" label="default" date="1452782206124" buildCount="1" producerId="undefined">
+<release name="ti_sdo_codecs_mpeg2vdec" label="default" date="1455116582905" buildCount="1" producerId="undefined">
 <package name="ti.sdo.codecs.mpeg2vdec"
     version="1, 0, 0"/>
 <imports>

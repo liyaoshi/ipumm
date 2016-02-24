@@ -12,7 +12,7 @@ digraph dependencies {
     edge [style=solid, color=blue]
     ti_sdo_ce_video3 [shape=record,label="ti.sdo.ce.video3|1, 0, 0", URL="../E:\prashanth_backup\C_Drive\RTSC_GEN_TOOLS\codec_engine_3_21_00_19\packages\ti\sdo\ce\video3\package/package.rel.svg"];
     ti_sdo_codecs_mpeg2vdec_ce -> ti_sdo_ce_video3;
-    ti_sdo_codecs_mpeg2vdec [shape=record,label="ti.sdo.codecs.mpeg2vdec|1, 0, 0", URL="../E:\release\rtsc_503\ti\sdo\codecs\mpeg2vdec\package/package.rel.svg"];
+    ti_sdo_codecs_mpeg2vdec [shape=record,label="ti.sdo.codecs.mpeg2vdec|1, 0, 0", URL="../F:\Releases\rtsc\503\ti\sdo\codecs\mpeg2vdec\package/package.rel.svg"];
     ti_sdo_codecs_mpeg2vdec_ce -> ti_sdo_codecs_mpeg2vdec;
 
     edge [style=solid, color=lightgrey]

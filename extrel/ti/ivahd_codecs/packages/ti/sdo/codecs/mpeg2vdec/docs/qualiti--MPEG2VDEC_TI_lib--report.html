@@ -23,7 +23,7 @@
     </TD>
   </TR>
   <TR>
-    <TD><B>Date</B></TD><TD>Thu Jan 14 2016 17:56:38 GMT+0530 (IST)</TD>
+    <TD><B>Date</B></TD><TD>Wed Feb 10 2016 20:50:27 GMT+0530 (IST)</TD>
   </TR>
 
   <TR>
@@ -229,19 +229,19 @@ Determining compiler info.
 
 Chcking if this library was created with a TI compiler...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none "C:\ti\xdais_6_23\report\mpeg2vdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "&lt;ti_coff&gt;"
-                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_6410033608314335088.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_7133505798993342431.sh"
 This library was not  created with a TI compiler.
 
 Attempting to determine library format...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none "C:\ti\xdais_6_23\report\mpeg2vdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" -E "&lt;.*coff&gt;|&lt;.*elf&gt;"
-                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_2177391457731198519.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_4483512948375806564.sh"
   &lt;elf&gt;
   &lt;/elf&gt;
 The library is in ELF format.
 
 Attempting to determine the compiler version...
  Running command:&gt; "find.exe" "GCC:" "C:\ti\xdais_6_23\report\mpeg2vdec_ti_host.lib"|"C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "GCC:"
-                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_2290603455836040898.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_1477730760706390879.sh"
   FIND: Parameter format not correct
 The compiler is UNKNOWN.
 
@@ -253,7 +253,7 @@ The compiler is UNKNOWN.
 Running test 'XDAIS Rules 8, 9 and 10'
 Extracting names of global symbols defined by the algorithm...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\nm6x.exe" -g "C:\ti\xdais_6_23\report\mpeg2vdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" " [TBCU] "
-                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_2861458785683053958.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_3936099149741071426.sh"
   00000000 U HDVICP20_TI_DM_Prepare_SL2_TCM
   00000000 U HDVICP20_TI_DM_Trigger_SL2_TCM
   00000000 U HDVICP20_TI_DM_WaitForData_SL2_TCM
@@ -262,11 +262,11 @@ Extracting names of global symbols defined by the algorithm...
   00000000 U HDVICP20_TI_VDMA_Trigger_Extmem_SL2
   00000000 U HDVICP20_TI_VDMA_WaitForData_Extmem_SL2
   00000000 U MEMUTILS_getPhysicalAddr
-  00001f83 T MPEG2VDEC_TI_activate
+  00001f8b T MPEG2VDEC_TI_activate
   000003cf T MPEG2VDEC_TI_allocMemtabs
-  000019cd T MPEG2VDEC_TI_control
-  000019c3 T MPEG2VDEC_TI_deactivate
-  000016d1 T MPEG2VDEC_TI_decode
+  000019d5 T MPEG2VDEC_TI_control
+  000019c9 T MPEG2VDEC_TI_deactivate
+  000016d7 T MPEG2VDEC_TI_decode
   000003f9 T MPEG2VDEC_TI_freeMemtabs
   00000115 T MPEG2VDEC_TI_initMemtabs
   0000005d T MPEG2VDEC_TI_numMemtabs
@@ -283,12 +283,12 @@ and that no blacklisted external references are made
 Running test 'XDAIS Rule 12'
 Extracting names of global BSS data symbols...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\nm6x.exe" -g "C:\ti\xdais_6_23\report\mpeg2vdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" " [BD] "
-                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_5462253899570350727.sh"
-  00003100 D MPEG2VDEC_TI_DynamicParams
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_440001216569133714.sh"
+  00003104 D MPEG2VDEC_TI_DynamicParams
   00000000 D MPEG2VDEC_TI_IALG
   00000000 D MPEG2VDEC_TI_IMPEG2VDEC
   00000000 D MPEG2VDEC_TI_IRES
-  00003140 D MPEG2VDEC_TI_Static_Params
+  00003144 D MPEG2VDEC_TI_Static_Params
 Verifying that objects 'MPEG2VDEC_TI_IALG' and 'MPEG2VDEC_TI_IMPEG2VDEC' are defined...
 Data object 'MPEG2VDEC_TI_IALG' found.
 Data object 'MPEG2VDEC_TI_IMPEG2VDEC' found.
@@ -313,8 +313,8 @@ Currently, this test cannot be run on non-TI compiled libraries.
 <PRE>
 Running test 'XDAIS Rules 21, 22'
 Using sectti on ofd output to find static data & program memory requirements...
- Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,sections,header "C:\ti\xdais_6_23\report\mpeg2vdec_ti_host.lib" | "C:\USER_EDIT_THIS_PATH\cg_xml\bin\sectti.exe"
-                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_7354615663508936934.sh"
+ Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,sections,header "C:\ti\xdais_6_23\report\mpeg2vdec_ti_host.lib" | "C:\ti\cg_xml\bin\sectti.exe"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_8712486600173255993.sh"
   Reading from stdin ...
   ====================================================================
   REPORT FOR LIBRARY: C:/ti/xdais_6_23/report/mpeg2vdec_ti_host.lib
@@ -326,7 +326,7 @@ Using sectti on ofd output to find static data & program memory requirements...
   ************************************************************
                             Name : Size (dec)  Size (hex)  Type
   ------------------------------ : ----------  ----------  ----
-                           .text :      12512  0x000030e0  CODE 
+                           .text :      12516  0x000030e4  CODE 
                           .const :        152  0x00000098  DATA 
                            .data :         24  0x00000018  DATA 
          .data:MPEG2VDEC_TI_IALG :         36  0x00000024  DATA 
@@ -342,7 +342,7 @@ Using sectti on ofd output to find static data & program memory requirements...
   .const:MPEG2VDEC_TI_ICONT2_LEVEL2_DataSect0 :         32  0x00000020  DATA 
   .const:MPEG2VDEC_TI_ICONT2_LEVEL3_DataSect0 :         32  0x00000020  DATA 
   .const:MPEG2VDEC_TI_ICONT2_LEVEL4_DataSect0 :         32  0x00000020  DATA 
-           .const:load_data:init :     247480  0x0003c6b8  DATA 
+           .const:load_data:init :     247944  0x0003c888  DATA 
   .const:.string:MPEG2VDEC_TI_version :         96  0x00000060  DATA 
           .const:tableLSEECDCmds :        128  0x00000080  DATA 
          .const:tableLSECALCCmds :        576  0x00000240  DATA 
@@ -355,17 +355,17 @@ Using sectti on ofd output to find static data & program memory requirements...
   .const:MPEG2VDEC_TI_ICONT2_LEVEL4_DataSect0 :         32  0x00000020  DATA 
   .const:MPEG2VDEC_TI_EC_DataSect0 :         32  0x00000020  DATA 
   .const:.string:MPEG2VDEC_TI_ICONT2_SECTION1 :      18352  0x000047b0  DATA 
-  .const:.string:MPEG2VDEC_TI_ICONT2_LEVEL1_SECTION1 :      18072  0x00004698  DATA 
-  .const:.string:MPEG2VDEC_TI_ICONT2_LEVEL2_SECTION1 :      18224  0x00004730  DATA 
-  .const:.string:MPEG2VDEC_TI_ICONT2_LEVEL3_SECTION1 :      18832  0x00004990  DATA 
-  .const:.string:MPEG2VDEC_TI_ICONT2_LEVEL4_SECTION1 :      18752  0x00004940  DATA 
+  .const:.string:MPEG2VDEC_TI_ICONT2_LEVEL1_SECTION1 :      18080  0x000046a0  DATA 
+  .const:.string:MPEG2VDEC_TI_ICONT2_LEVEL2_SECTION1 :      18248  0x00004748  DATA 
+  .const:.string:MPEG2VDEC_TI_ICONT2_LEVEL3_SECTION1 :      18856  0x000049a8  DATA 
+  .const:.string:MPEG2VDEC_TI_ICONT2_LEVEL4_SECTION1 :      18776  0x00004958  DATA 
              .const:ec_load_data :      21192  0x000052c8  DATA 
   
   ------------------------------------------------------------
   Totals by section type
   ------------------------------------------------------------
-      Initialized Data :     384224  0x0005dce0
-                  Code :      12512  0x000030e0
+      Initialized Data :     384768  0x0005df00
+                  Code :      12516  0x000030e4
 
 </PRE>
 <a href="#XDAIS Rules 21, 22">back</a>
@@ -375,7 +375,7 @@ Using sectti on ofd output to find static data & program memory requirements...
 Running test 'XDAIS Rule 25'
 Using ofd output to parse for endianness attribute...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,header "C:\ti\xdais_6_23\report\mpeg2vdec_ti_host.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "&lt;ei_data&gt;"
-                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_5958791442550275247.sh"
+                   (from "C:\Users\user\AppData\Local\Temp\qualiti_runcmd_3234260298504912910.sh"
   &lt;ei_data&gt;ELFDATA2LSB&lt;/ei_data&gt;
 
 </PRE>

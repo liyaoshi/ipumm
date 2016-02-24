@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--  This file conforms to the DTD xdc/bld/release.dtd -->
-<release name="ti_sdo_codecs_mpeg2vdec_ce" label="default" date="1452782210513" buildCount="1" producerId="undefined">
+<release name="ti_sdo_codecs_mpeg2vdec_ce" label="default" date="1455116587091" buildCount="1" producerId="undefined">
 <package name="ti.sdo.codecs.mpeg2vdec.ce"
     version="1, 0, 0"/>
 <imports>
@@ -89,8 +89,8 @@
         <file name="package.xs"/>
     </package>
     <package name="ti.sdo.codecs.mpeg2vdec"
-        version="1, 0, 0, 1452782206112"
-        providerId="E:/release/rtsc_503">
+        version="1, 0, 0, 1455116582876"
+        providerId="F:/Releases/rtsc/503">
         <file name="MPEG2VDEC.xdc"/>
         <file name="package.xs"/>
     </package>
