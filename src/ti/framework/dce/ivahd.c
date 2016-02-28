@@ -472,13 +472,17 @@ void ivahd_init(uint32_t chipset_id)
 
     ret = RMAN_init();
     if( ret != IRES_OK ) {
+        ERROR("RMAN_init is failing ret %d", ret);
+        CERuntime_exit();
         goto end;
     }
 
     /* Register HDVICP with RMAN if not already registered */
     ret = RMAN_register(&IRESMAN_HDVICP, &rman_params);
     if((ret != IRES_OK) && (ret != IRES_EEXISTS)) {
-        DEBUG("could not register IRESMAN_HDVICP: %d", ret);
+        ERROR("could not register IRESMAN_HDVICP: %d", ret);
+        RMAN_exit();
+        CERuntime_exit();
         goto end;
     }
 
@@ -489,7 +493,13 @@ void ivahd_init(uint32_t chipset_id)
      */
     ret = RMAN_register(&IRESMAN_TILEDMEMORY, &rman_params);
     if((ret != IRES_OK) && (ret != IRES_EEXISTS)) {
-        DEBUG("could not register IRESMAN_TILEDMEMORY: %d", ret);
+        ERROR("could not register IRESMAN_TILEDMEMORY: %d", ret);
+        ret = RMAN_unregister(&IRESMAN_HDVICP);
+        if( ret != IRES_OK ) {
+            ERROR("RMAN_unregister on IRESMAN_HDVICP fail with ret %d", ret);
+        }
+        RMAN_exit();
+        CERuntime_exit();
         goto end;
     }
 
