@@ -380,30 +380,28 @@ static inline void set_ivahd_opp(int opp)
 #endif //ENABLE_DEAD_CODE
 void ivahd_acquire(void)
 {
-    UInt    hwiKey = Hwi_disable();
-
     if( ++ivahd_use_cnt == 1 ) {
         DEBUG("ivahd acquire");
+        UInt hwiKey = Hwi_disable();
         /* switch SW_WAKEUP mode */
         CM_IVAHD_CLKSTCTRL = 0x00000002;
+        Hwi_restore(hwiKey);
     } else {
         DEBUG("ivahd already acquired");
     }
-    Hwi_restore(hwiKey);
 }
 
 void ivahd_release(void)
 {
-    UInt    hwiKey = Hwi_disable();
-
     if( ivahd_use_cnt-- == 1 ) {
         DEBUG("ivahd release");
+        UInt hwiKey = Hwi_disable();
         /* switch HW_AUTO mode */
         CM_IVAHD_CLKSTCTRL = 0x00000003;
+        Hwi_restore(hwiKey);
     } else {
         DEBUG("ivahd still in use");
     }
-    Hwi_restore(hwiKey);
 }
 
 /* This function is to check IVA clocks to make sure IVAHD is idle */
