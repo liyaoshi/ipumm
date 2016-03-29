@@ -118,7 +118,7 @@ static XDAS_Int32 viddec3_process(VIDDEC3_Handle codec, XDM2_BufDesc *inBufs, XD
 
 static int viddec3_reloc(VIDDEC3_Handle handle, uint8_t *ptr, uint32_t len);
 
-static pthread_mutex_t sync_process_mutex;
+static Semaphore_Handle sync_process_sem;
 
 typedef struct {
     XDM_DataSyncHandle dataSyncHandle;
@@ -964,7 +964,7 @@ static int codec_process(UInt32 size, UInt32 *data)
         return (-1);
     }
 
-    pthread_mutex_lock(&sync_process_mutex);
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
 
     dce_inv(inBufs);
     dce_inv(outBufs);
@@ -972,8 +972,8 @@ static int codec_process(UInt32 size, UInt32 *data)
     dce_inv(outArgs);
 
 
-    DEBUG(">> codec=%p, inBufs=%p, outBufs=%p, inArgs=%p, outArgs=%p codec_id=%d LOCK sync_process_mutex 0x%x",
-          codec, inBufs, outBufs, inArgs, outArgs, codec_id, sync_process_mutex);
+    DEBUG(">> codec=%p, inBufs=%p, outBufs=%p, inArgs=%p, outArgs=%p codec_id=%d LOCK sync_process_sem 0x%x",
+          codec, inBufs, outBufs, inArgs, outArgs, codec_id, sync_process_sem);
 
 #ifdef PSI_KPI
         kpi_before_codec();
@@ -994,8 +994,8 @@ static int codec_process(UInt32 size, UInt32 *data)
     dce_clean(inArgs);
     dce_clean(outArgs);
 
-    DEBUG("codec_process codec=%p UNLOCK sync_process_mutex 0x%x", codec, sync_process_mutex);
-    pthread_mutex_unlock(&sync_process_mutex);
+    DEBUG("codec_process codec=%p POST sync_process_sem 0x%x", codec, sync_process_sem);
+    Semaphore_post(sync_process_sem);
 
     return ((Int32)ret);
 }
@@ -1537,6 +1537,7 @@ Bool dce_init(void)
 {
     Task_Params    params;
     Task_Params    callback_params;
+    Semaphore_Params semParams;
 
     INFO("Creating DCE server and DCE callbabk server thread...");
 
@@ -1552,7 +1553,9 @@ Bool dce_init(void)
     callback_params.priority = Thread_Priority_ABOVE_NORMAL;
     Task_create(dce_callback_main, &callback_params, NULL);
 
-    pthread_mutex_init(&sync_process_mutex, NULL);
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    sync_process_sem = Semaphore_create(1, &semParams, NULL);
 
     return (TRUE);
 }
@@ -1565,7 +1568,7 @@ void dce_deinit(void)
 {
     DEBUG("dce_deinit");
 
-    pthread_mutex_destroy(&sync_process_mutex);
+    Semaphore_delete(&sync_process_sem);
 }
 
 /*
