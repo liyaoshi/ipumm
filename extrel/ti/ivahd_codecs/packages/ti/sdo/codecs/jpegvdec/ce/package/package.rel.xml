@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--  This file conforms to the DTD xdc/bld/release.dtd -->
-<release name="ti_sdo_codecs_jpegvdec_ce" label="default" date="1453472113071" buildCount="1" producerId="undefined">
+<release name="ti_sdo_codecs_jpegvdec_ce" label="default" date="1458558325723" buildCount="1" producerId="undefined">
 <package name="ti.sdo.codecs.jpegvdec.ce"
     version="1, 0, 0"/>
 <imports>
@@ -111,7 +111,7 @@
         <file name="java\package.jar"/>
     </package>
     <package name="ti.sdo.codecs.jpegvdec"
-        version="1, 0, 0, 1453472109045"
+        version="1, 0, 0, 1458558321356"
         providerId="E:/release/rtsc/503">
         <file name="JPEGVDEC.xdc"/>
         <file name="package.xs"/>
