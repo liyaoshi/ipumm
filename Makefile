@@ -83,6 +83,8 @@ PROFILER    ?= DISABLE
 
 all: ducatibin
 
+lib: ducatilib
+
 # Include platform build configuration
 config:
 ifeq (bldcfg.mk,$(wildcard bldcfg.mk))
@@ -138,6 +140,19 @@ clean: config
 	 $(XDCROOT)/xdc --jobs=$(JOBS) clean -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baselib/.; \
 	 $(XDCROOT)/xdc --jobs=$(JOBS) clean -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baseimage/.
 
+buildlib: config
+ifeq ($(IPCSRC),)
+	@echo "ERROR: IPCSRC not set. Exiting..."
+	@echo "For more info, use 'make help'"
+	@exit 1
+else ifeq ($(TMS470CGTOOLPATH),)
+	@echo "ERROR: TMS470CGTOOLPATH not set. Exiting..."
+	@echo "For more info, use 'make help'"
+	@exit 1
+endif
+	export XDCARGS=$(MYXDCARGS); \
+	$(XDCROOT)/xdc --jobs=$(JOBS) -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baselib/.
+
 build: config
 ifeq ($(IPCSRC),)
 	@echo "ERROR: IPCSRC not set. Exiting..."
@@ -151,6 +166,8 @@ endif
 	export XDCARGS=$(MYXDCARGS); \
 	$(XDCROOT)/xdc --jobs=$(JOBS) -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baselib/.; \
 	$(XDCROOT)/xdc --jobs=$(JOBS) -PD $(DUCATIDCEMMSRC)/platform/ti/dce/baseimage/.
+
+ducatilib: buildlib
 
 ducatibin: build
 ifeq ($(FORSMP),1)
