@@ -111,7 +111,7 @@
         <file name="java\package.jar"/>
     </package>
     <package name="ti.sdo.codecs.jpegvdec"
-        version="1, 0, 0, 1458558321356"
+        version="1, 0, 0, 1460018994691"
         providerId="E:/release/rtsc/503">
         <file name="JPEGVDEC.xdc"/>
         <file name="package.xs"/>
