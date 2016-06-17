@@ -58,6 +58,7 @@
 #include <xdc/runtime/IHeap.h>
 #include <xdc/runtime/knl/Thread.h>
 #include <xdc/std.h>
+#include <ti/sysbios/utils/Load.h>
 
 #include "dce_priv.h"
 #include "dce_rpc.h"
@@ -115,6 +116,8 @@ static int videnc2_reloc(VIDDEC3_Handle handle, uint8_t *ptr, uint32_t len);
 static VIDDEC3_Handle viddec3_create(Engine_Handle engine, String name, VIDDEC3_Params *params);
 static XDAS_Int32 viddec3_control(VIDDEC3_Handle codec,VIDDEC3_Cmd id,VIDDEC3_DynamicParams * dynParams,VIDDEC3_Status * status);
 static XDAS_Int32 viddec3_process(VIDDEC3_Handle codec, XDM2_BufDesc *inBufs, XDM2_BufDesc *outBufs, VIDDEC3_InArgs *inArgs, VIDDEC3_OutArgs *outArgs);
+
+static Int32 get_rproc_info(UInt32 size, UInt32 *data);
 
 static int viddec3_reloc(VIDDEC3_Handle handle, uint8_t *ptr, uint32_t len);
 
@@ -695,6 +698,44 @@ static Int32 engine_close(UInt32 size, UInt32 *data)
     return (0);
 }
 
+
+#define INFO_TYPE_CPU_LOAD 0
+#define INFO_TYPE_TOTAL_HEAP_SIZE 1
+#define INFO_TYPE_AVAILABLE_HEAP_SIZE 2
+
+static Int32 get_rproc_info(UInt32 size, UInt32 *data)
+{
+    MmType_Param    *payload = (MmType_Param *)data;
+    Uint32           info_type = (Uint32)payload[0].data;
+    Memory_Stats     stats;
+    Uint32           output = 0;
+
+    switch(info_type)
+    {
+        case INFO_TYPE_CPU_LOAD:
+            output = Load_getCPULoad();
+            break;
+
+        case INFO_TYPE_TOTAL_HEAP_SIZE:
+            Memory_getStats(NULL, &stats);
+            output = stats.totalSize;
+            break;
+
+        case INFO_TYPE_AVAILABLE_HEAP_SIZE:
+            Memory_getStats(NULL, &stats);
+            output = stats.totalFreeSize;
+            break;
+
+        default:
+            System_printf("\n ERROR: Invalid INFO TYPE chosen \n");
+            break;
+    }
+
+    return output;
+}
+
+
+
 /*
   * codec_create
   */
@@ -1240,7 +1281,9 @@ static RcmServer_FxnDesc    DCEServerFxnAry[] =
     { "codec_control",    (RcmServer_MsgFxn) codec_control },
     { "codec_get_version",    (RcmServer_MsgFxn) codec_get_version },
     { "codec_process",   (RcmServer_MsgFxn) codec_process },
-    { "codec_delete",    (RcmServer_MsgFxn) codec_delete }
+    { "codec_delete",    (RcmServer_MsgFxn) codec_delete },
+    { "get_rproc_info", (RcmServer_MsgFxn) get_rproc_info }
+
 };
 
 /* DCE Server skel function table */
@@ -1304,7 +1347,13 @@ static MmType_FxnSig    DCEServer_sigAry[] =
           { MmType_Dir_Out, MmType_Param_S32, 1 }, // return
           { MmType_Dir_In, MmType_Param_U32, 1 },
           { MmType_Dir_In, MmType_Param_U32, 1 }
+      } },
+    { "get_rproc_info", 2,
+      {
+         { MmType_Dir_Out, MmType_Param_S32, 1 }, // return
+          { MmType_Dir_In, MmType_Param_U32, 1 }
       } }
+
 };
 
 static MmType_FxnSigTab    dce_fxnSigTab =
