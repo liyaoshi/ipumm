@@ -647,6 +647,8 @@ static Int32 engine_open(UInt32 size, UInt32 *data)
     Uint32             num_params = MmRpc_NUM_PARAMETERS(size);
     Int32              ret = 0;
 
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
+
     DEBUG(">> engine_open");
 
     if( num_params != 1 ) {
@@ -657,7 +659,6 @@ static Int32 engine_open(UInt32 size, UInt32 *data)
     dce_inv(engine_open_msg);
 
     eng_handle = Engine_open(engine_open_msg->name, engine_open_msg->engine_attrs, &engine_open_msg->error_code);
-    DEBUG("<< engine=%08x, ec=%d", eng_handle, engine_open_msg->error_code);
 
     mm_serv_id = MmServiceMgr_getId();
     DEBUG("engine_open mm_serv_id 0x%x", mm_serv_id);
@@ -667,7 +668,11 @@ static Int32 engine_open(UInt32 size, UInt32 *data)
         Engine_close(eng_handle);
         eng_handle = NULL;
     }
+
+    DEBUG("<< engine=%08x, ec=%d", eng_handle, engine_open_msg->error_code);
+
     dce_clean(engine_open_msg);
+    Semaphore_post(sync_process_sem);
 
     return ((Int32)eng_handle);
 }
@@ -682,6 +687,10 @@ static Int32 engine_close(UInt32 size, UInt32 *data)
     Uint32           mm_serv_id = 0;
     Uint32           num_params = MmRpc_NUM_PARAMETERS(size);
 
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
+
+    DEBUG(">> engine_close %08x", eng_handle);
+
     if( num_params != 1 ) {
         ERROR("invalid number of params sent");
         return (-1);
@@ -694,6 +703,8 @@ static Int32 engine_close(UInt32 size, UInt32 *data)
 
     Engine_close(eng_handle);
     DEBUG("<<");
+
+    Semaphore_post(sync_process_sem);
 
     return (0);
 }
@@ -755,7 +766,10 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
 #ifdef MEMORYSTATS_DEBUG
     Memory_Stats    stats;
 #endif
-    DEBUG(">> codec_create");
+
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
+
+    DEBUG(">> codec_create on engine %08x", engine);
 
     if( num_params != 4 ) {
         ERROR("invalid number of params sent");
@@ -781,7 +795,6 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
     ivahd_release();
 
     mm_serv_id = MmServiceMgr_getId();
-    DEBUG("codec_create codec_handle 0x%x mm_serv_id 0x%x", codec_handle, mm_serv_id);
 
     ret = dce_register_codec(codec_id, mm_serv_id, (Uint32) codec_handle);
     if( ret < 0 ) {
@@ -790,7 +803,7 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
     }
 
     if ( codec_id == OMAP_DCE_VIDDEC3 ) {
-        DEBUG("codec_create for VIDDEC3 codec_handle 0x%x", codec_handle);
+        DEBUG("codec_create for VIDDEC3 codec_handle 0x%x mm_serv_id 0x%x", codec_handle, mm_serv_id);
         if ( ((VIDDEC3_Params*)static_params)->outputDataMode == IVIDEO_NUMROWS ) {
             c = get_client_instance((Uint32) codec_handle);
             int i;
@@ -805,7 +818,7 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
             }
         }
     } else if ( codec_id == OMAP_DCE_VIDENC2 ) {
-        DEBUG("codec_create for VIDENC2 codec_handle 0x%x", codec_handle);
+        DEBUG("codec_create for VIDENC2 codec_handle 0x%x mm_serv_id 0x%x", codec_handle, mm_serv_id);
         if ( ((VIDENC2_Params*)static_params)->inputDataMode == IVIDEO_NUMROWS ) {
             c = get_client_instance((Uint32) codec_handle);
             int i;
@@ -821,10 +834,12 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
         }
     }
 
-    DEBUG("<< codec_handle=%08x", codec_handle);
+    DEBUG("<< codec_handle=%08x on engine %08x", codec_handle, engine);
 
     dce_clean(static_params);
     dce_clean(codec_name);
+
+    Semaphore_post(sync_process_sem);
 
 #ifdef MEMORYSTATS_DEBUG
     Memory_getStats(NULL, &stats);
@@ -851,8 +866,9 @@ static int codec_control(UInt32 size, UInt32 *data)
     Uint32          num_params = MmRpc_NUM_PARAMETERS(size);
     Int32           ret = 0;
 
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
 
-    DEBUG(">> codec_control");
+    DEBUG(">> codec_control on codec_handle %08x", codec_handle);
 
     if( num_params != 5 ) {
         ERROR("invalid number of params sent");
@@ -868,10 +884,12 @@ static int codec_control(UInt32 size, UInt32 *data)
     ret = (uint32_t) codec_fxns[codec_id].control(codec_handle, cmd_id, dyn_params, status);
     ivahd_release();
 
-    DEBUG("<< result=%d", ret);
+    DEBUG("<< codec_control on codec_handle %08x result=%d", codec_handle, ret);
 
     dce_clean(dyn_params);
     dce_clean(status);
+
+    Semaphore_post(sync_process_sem);
 
     return (ret);
 }
@@ -890,7 +908,9 @@ static int codec_get_version(UInt32 size, UInt32 *data)
     void           *version_buf = NULL;
     Int32           ret = 0;
 
-    DEBUG(">> codec_get_version");
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
+
+    DEBUG(">> codec_get_version on codec_handle %08x", codec_handle);
 
     if( num_params != 4 ) {
         ERROR("invalid number of params sent");
@@ -910,11 +930,13 @@ static int codec_get_version(UInt32 size, UInt32 *data)
     ret = (uint32_t) codec_fxns[codec_id].control(codec_handle, XDM_GETVERSION, dyn_params, status);
     ivahd_release();
 
-    DEBUG("<< result=%d", ret);
+    DEBUG("<< codec_get_version on codec_handle %08x result=%d", codec_handle, ret);
 
     dce_clean(dyn_params);
     dce_clean(status);
     dce_clean(version_buf);
+
+    Semaphore_post(sync_process_sem);\
 
     return (ret);
 }
@@ -998,23 +1020,22 @@ static int codec_process(UInt32 size, UInt32 *data)
     void           *outArgs  = (void *) payload[5].data;
     Int32           ret = 0;
 
-    DEBUG(">> codec_process");
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
+
+    DEBUG(">> codec_process codec=%p", codec);
 
     if( num_params != 6 ) {
         ERROR("invalid number of params sent");
         return (-1);
     }
 
-    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
-
     dce_inv(inBufs);
     dce_inv(outBufs);
     dce_inv(inArgs);
     dce_inv(outArgs);
 
-
     DEBUG(">> codec=%p, inBufs=%p, outBufs=%p, inArgs=%p, outArgs=%p codec_id=%d LOCK sync_process_sem 0x%x",
-          codec, inBufs, outBufs, inArgs, outArgs, codec_id, sync_process_sem);
+        codec, inBufs, outBufs, inArgs, outArgs, codec_id, sync_process_sem);
 
 #ifdef PSI_KPI
         kpi_before_codec();
@@ -1028,14 +1049,13 @@ static int codec_process(UInt32 size, UInt32 *data)
 #ifdef PSI_KPI
         kpi_after_codec();
 #endif /*PSI_KPI*/
-    DEBUG("<< ret=%d extendedError=%08x", ret, ((VIDDEC3_OutArgs *)outArgs)->extendedError);
+    DEBUG("<< codec=%p ret=%d extendedError=%08x", codec, ret, ((VIDDEC3_OutArgs *)outArgs)->extendedError);
 
     dce_clean(inBufs);
     dce_clean(outBufs);
     dce_clean(inArgs);
     dce_clean(outArgs);
 
-    DEBUG("codec_process codec=%p POST sync_process_sem 0x%x", codec, sync_process_sem);
     Semaphore_post(sync_process_sem);
 
     return ((Int32)ret);
@@ -1057,6 +1077,8 @@ static int codec_delete(UInt32 size, UInt32 *data)
 #ifdef MEMORYSTATS_DEBUG
     Memory_Stats    stats;
 #endif
+
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
 
     DEBUG(">> codec_delete on codec 0x%x", codec);
 
@@ -1107,7 +1129,9 @@ static int codec_delete(UInt32 size, UInt32 *data)
          stats.totalFreeSize, stats.largestFreeSize);
 #endif
 
-    DEBUG("<<");
+    DEBUG("<< codec_delete");
+
+    Semaphore_post(sync_process_sem);
 
 #ifdef PSI_KPI
         kpi_comp_deinit((void*)codec);
@@ -1410,6 +1434,8 @@ Void dce_SrvDelNotification(Void)
     int i;
     uint32_t mm_serv_id = 0;
 
+    Semaphore_pend(sync_process_sem, BIOS_WAIT_FOREVER);
+
     DEBUG("dce_SrvDelNotification: cleanup existing codec and engine\n");
 
     mm_serv_id = MmServiceMgr_getId();
@@ -1488,6 +1514,8 @@ Void dce_SrvDelNotification(Void)
         }
     }
     DEBUG("dce_SrvDelNotification: COMPLETE exit function \n");
+
+    Semaphore_post(sync_process_sem);
 }
 
 Void dceCallback_SrvDelNotification(Void)
