@@ -755,46 +755,47 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
     codec_handle = (void *)codec_fxns[codec_id].create(engine, codec_name, static_params);
     ivahd_release();
 
-    mm_serv_id = MmServiceMgr_getId();
+    if( codec_handle ) {
+        mm_serv_id = MmServiceMgr_getId();
 
-    ret = dce_register_codec(codec_id, mm_serv_id, (Uint32) codec_handle);
-    if( ret < 0 ) {
-        codec_fxns[codec_id].delete((void *)codec_handle);
-        codec_handle = NULL;
-    }
-
-    if ( codec_id == OMAP_DCE_VIDDEC3 ) {
-        DEBUG("codec_create for VIDDEC3 codec_handle 0x%x mm_serv_id 0x%x", codec_handle, mm_serv_id);
-        if ( ((VIDDEC3_Params*)static_params)->outputDataMode == IVIDEO_NUMROWS ) {
-            c = get_client_instance((Uint32) codec_handle);
-            int i;
-            for (i = 0; i < DIM(c->decode_codec); i++ ) {
-                if (c->decode_codec[i] == codec_handle) {
-                    c->decode_callback[i].row_mode = 1;
-                    pthread_mutex_init(&(c->decode_callback[i].callback_mutex), NULL);
-                    pthread_cond_init(&(c->decode_callback[i].synch_callback), NULL);
-                    DEBUG("codec_create client 0x%x c->decode_callback[%d].callback_mutex 0x%x c->decode_callback[%d].row_mode %d",
-                        c, i, c->decode_callback[i].callback_mutex, i, c->decode_callback[i].row_mode);
+        ret = dce_register_codec(codec_id, mm_serv_id, (Uint32) codec_handle);
+        if( ret < 0 ) {
+            codec_fxns[codec_id].delete((void *)codec_handle);
+            codec_handle = NULL;
+        } else {
+            if( codec_id == OMAP_DCE_VIDDEC3 ) {
+                DEBUG("codec_create for VIDDEC3 codec_handle 0x%x mm_serv_id 0x%x", codec_handle, mm_serv_id);
+                if( ((VIDDEC3_Params*)static_params)->outputDataMode == IVIDEO_NUMROWS ) {
+                    c = get_client_instance((Uint32) codec_handle);
+                    int i;
+                    for( i = 0; i < DIM(c->decode_codec); i++ ) {
+                        if( c->decode_codec[i] == codec_handle ) {
+                            c->decode_callback[i].row_mode = 1;
+                            pthread_mutex_init(&(c->decode_callback[i].callback_mutex), NULL);
+                            pthread_cond_init(&(c->decode_callback[i].synch_callback), NULL);
+                            DEBUG("codec_create client 0x%x c->decode_callback[%d].callback_mutex 0x%x c->decode_callback[%d].row_mode %d",
+                                c, i, c->decode_callback[i].callback_mutex, i, c->decode_callback[i].row_mode);
+                        }
+                    }
+                }
+            } else if( codec_id == OMAP_DCE_VIDENC2 ) {
+                DEBUG("codec_create for VIDENC2 codec_handle 0x%x mm_serv_id 0x%x", codec_handle, mm_serv_id);
+                if( ((VIDENC2_Params*)static_params)->inputDataMode == IVIDEO_NUMROWS ) {
+                    c = get_client_instance((Uint32) codec_handle);
+                    int i;
+                    for( i = 0; i < DIM(c->encode_codec); i++ ) {
+                        if( c->encode_codec[i] == codec_handle ) {
+                            c->encode_callback[i].row_mode = 1;
+                            pthread_mutex_init(&(c->encode_callback[i].callback_mutex), NULL);
+                            pthread_cond_init(&(c->encode_callback[i].synch_callback), NULL);
+                            DEBUG("codec_create client 0x%x c->encode_callback[%d].callback_mutex 0x%x c->encode_callback[%d].row_mode %d",
+                                c, i, c->encode_callback[i].callback_mutex, i, c->encode_callback[i].row_mode);
+                        }
+                    }
                 }
             }
         }
-    } else if ( codec_id == OMAP_DCE_VIDENC2 ) {
-        DEBUG("codec_create for VIDENC2 codec_handle 0x%x mm_serv_id 0x%x", codec_handle, mm_serv_id);
-        if ( ((VIDENC2_Params*)static_params)->inputDataMode == IVIDEO_NUMROWS ) {
-            c = get_client_instance((Uint32) codec_handle);
-            int i;
-            for (i = 0; i < DIM(c->encode_codec); i++ ) {
-                if (c->encode_codec[i] == codec_handle) {
-                    c->encode_callback[i].row_mode = 1;
-                    pthread_mutex_init(&(c->encode_callback[i].callback_mutex), NULL);
-                    pthread_cond_init(&(c->encode_callback[i].synch_callback), NULL);
-                    DEBUG("codec_create client 0x%x c->encode_callback[%d].callback_mutex 0x%x c->encode_callback[%d].row_mode %d",
-                        c, i, c->encode_callback[i].callback_mutex, i, c->encode_callback[i].row_mode);
-                }
-            }
-        }
     }
-
     DEBUG("<< codec_handle=%08x on engine %08x", codec_handle, engine);
 
     dce_clean(static_params);
