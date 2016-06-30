@@ -657,13 +657,15 @@ static Int32 engine_open(UInt32 size, UInt32 *data)
 
     eng_handle = Engine_open(engine_open_msg->name, engine_open_msg->engine_attrs, &engine_open_msg->error_code);
 
-    mm_serv_id = MmServiceMgr_getId();
-    DEBUG("engine_open mm_serv_id 0x%x", mm_serv_id);
+    if( eng_handle ) {
+        mm_serv_id = MmServiceMgr_getId();
+        DEBUG("engine_open mm_serv_id 0x%x eng_handle %08x", mm_serv_id, eng_handle);
 
-    ret = dce_register_engine(mm_serv_id, eng_handle);
-    if( ret < 0 ) {
-        Engine_close(eng_handle);
-        eng_handle = NULL;
+        ret = dce_register_engine(mm_serv_id, eng_handle);
+        if( ret < 0 ) {
+            Engine_close(eng_handle);
+            eng_handle = NULL;
+        }
     }
 
     DEBUG("<< engine=%08x, ec=%d", eng_handle, engine_open_msg->error_code);
