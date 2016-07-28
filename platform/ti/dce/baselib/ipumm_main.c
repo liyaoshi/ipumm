@@ -83,6 +83,8 @@ int IPUMM_Main(int argc, char * *argv)
     hostId = MultiProc_getId("HOST");
     RPMessage_init(hostId);
 
+    dce_init();
+
     /* CPU load reporting in the trace. */
     start_load_task();
 

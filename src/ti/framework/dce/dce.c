@@ -1619,7 +1619,7 @@ Bool dce_init(void)
     Task_Params    callback_params;
     Semaphore_Params semParams;
 
-    INFO("Creating DCE server and DCE callbabk server thread...");
+    INFO("Creating DCE server and DCE callback server thread...");
 
     /* Create DCE task. */
     Task_Params_init(&params);
