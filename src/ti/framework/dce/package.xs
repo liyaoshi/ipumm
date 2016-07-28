@@ -46,7 +46,6 @@ function init()
      * it will be called during BIOS_start()
      */
     var BIOS = xdc.useModule('ti.sysbios.BIOS');
-    BIOS.addUserStartupFunction('&dce_init');
 
     Program.sectMap[".ipummversion"] = new Program.SectionSpec();
     Program.sectMap[".ipummversion"].type = "COPY";
