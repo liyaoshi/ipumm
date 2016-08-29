@@ -919,14 +919,16 @@ static int codec_get_version(UInt32 size, UInt32 *data)
         ERROR("invalid number of params sent");
         return (-1);
     }
+
+    dce_inv(dyn_params);
+    dce_inv(status);
+
     if( codec_id == OMAP_DCE_VIDDEC3 ) {
         version_buf = (void *)(H2P((MemHeader *)((IVIDDEC3_Status *)status)->data.buf));
     } else if( codec_id == OMAP_DCE_VIDENC2 ) {
         version_buf = (void *)(H2P((MemHeader *)((IVIDENC2_Status *)status)->data.buf));
     }
 
-    dce_inv(dyn_params);
-    dce_inv(status);
     dce_inv(version_buf);
 
     ivahd_acquire();
