@@ -53,6 +53,12 @@
         <file name="IVIDDEC3.xdc"/>
         <file name="package.xs"/>
     </package>
+    <package name="ti.sdo.codecs.h264vdec"
+        version="1, 0, 0, 1474546135374"
+        providerId="F:/Releases/rtsc/503">
+        <file name="H264VDEC.xdc"/>
+        <file name="package.xs"/>
+    </package>
     <package name="ti.sdo.ce.ipc"
         version="2, 0, 1, 1313544812640"
         providerId="codec_engine_3_21_00_19">
@@ -109,12 +115,6 @@
         version="1, 0, 0, 0, 1275003755582"
         providerId="xdccore">
         <file name="java\package.jar"/>
-    </package>
-    <package name="ti.sdo.codecs.h264vdec"
-        version="1, 0, 0, 1455003596245"
-        providerId="E:/release/rtsc/503">
-        <file name="H264VDEC.xdc"/>
-        <file name="package.xs"/>
     </package>
     <xdcRoot base="E:/ccs4_install/xdctools_3_20_01_42_eng/">
         <file name="/packages/xdc/package.xdc"/>
