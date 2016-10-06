@@ -38,9 +38,9 @@ REPO		:= $(BIOSTOOLSROOT)
 # in your environment.
 XDCVERSION	?= xdctools_3_32_00_06_core
 BIOSVERSION	?= bios_6_45_01_29
-IPCVERSION	?= ipc_3_43_00_01
+IPCVERSION	?= ipc_3_43_03_05
 CEVERSION	?= codec_engine_3_24_00_08
-FCVERSION	?= framework_components_3_40_01_04
+FCVERSION	?= framework_components_3_40_02_07
 XDAISVERSION	?= xdais_7_24_00_04
 
 # TI Compiler Settings
