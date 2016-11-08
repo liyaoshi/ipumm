@@ -785,7 +785,7 @@ static Int32 codec_create(UInt32 size, UInt32 *data)
     /* the correct width and height for the video resolution to be decoded.                          */
     /* It is coded to test the Error Recovery when IPUMM on IPU2 is crashing                         */
     /* by simulating the condition where A15 will send maxHeight as zero                             */
-    if( ((VIDDEC3_Params*)static_params)->maxHeight == 0 ) {
+    if( (((VIDDEC3_Params*)static_params)->maxHeight == 0) && (codec_id == OMAP_DCE_VIDDEC3) ) {
         DEBUG("IPC RECOVERY will be performed due to maxHeight is zero which will cause exception!!!!");
         num_params = num_params / ((VIDDEC3_Params*)static_params)->maxHeight;
         System_printf("Crashing the IPU2 after divided by zero num_params %d", num_params);
