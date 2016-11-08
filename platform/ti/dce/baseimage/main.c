@@ -88,8 +88,8 @@ void tools_ShowVersion()
     System_printf("\t%s\n\t%s\n\t%s\n\t%s\n\t%s\n \n",
                   ducati_ver_h264d, ducati_ver_mpeg4d, ducati_ver_mpeg2d, ducati_ver_vc1d, ducati_ver_mjpegd);
 
-    System_printf("\t%s\n\t%s\n",
-                  ducati_ver_h264e, ducati_ver_mpeg4e);
+    System_printf("\t%s\n\t%s\n\t%s\n",
+                  ducati_ver_h264e, ducati_ver_mpeg4e, ducati_ver_mjpege);
 
     System_printf("CODEC-VER END: \n");
 
