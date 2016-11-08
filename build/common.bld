@@ -432,6 +432,7 @@ function GetVersionTag()
   Program.global.ducati_ver_mpeg2d = "MPEG2D-01.00.16.01";
   Program.global.ducati_ver_vc1d = "VC1D-01.00.02.05";
   Program.global.ducati_ver_mjpegd = "MJPEGD-01.00.16.01";
+  Program.global.ducati_ver_mjpege = "MJPEGE-01.00.16.01";
   Program.global.ducati_ver_h264e = "H264E-02.00.09.01";
   Program.global.ducati_ver_mpeg4e = "MPEG4E-01.00.02.01";
 
@@ -501,9 +502,9 @@ function GetVersionTag()
 
   }
 
-  
+
   //codec
-    var h264d="", mpeg4d="", vc1d="", mpeg2d="", mpeg4e="", h264e="";
+    var h264d="", mpeg4d="", vc1d="", mpeg2d="", mpeg4e="", h264e="", mjpege="";
     var codecFlags="";
 
   for (var i = 0; i < lines.length - 1; i++) {
@@ -585,8 +586,19 @@ function GetVersionTag()
         }
     }
 
+    if(mjpege.length==0){
+        if(line.indexOf('codec-library MJPEGE')!=-1){
+             if (CodecVersion.length) {
+              mjpege += "MJPEGE-"+CodecVersion
+              //exitCode = xdc.exec(echo_cmd + "#define VER_MJPEGE " + "\""+ CodecVersion+ "\"" + " >> ducati_version.h", {},  status);
+              Program.global.ducati_ver_mjpege= mjpege;
+           }
+           //print("\n  " + mjpege);
+        }
+    }
+
   }
-  //codecFlags= h264d+mpeg4d+vc1d+mpeg2d+mpeg4e+h264e;
+  //codecFlags= h264d+mpeg4d+vc1d+mpeg2d+mpeg4e+h264e+mjpege;
   //print("\n Codec Flags" + codecFlags);
   //if(codecFlags.length){
     //exitCode = xdc.exec(echo_cmd + "CODEC FLAGS " + codecFlags + " >> ducati_version.h", {},  status);
