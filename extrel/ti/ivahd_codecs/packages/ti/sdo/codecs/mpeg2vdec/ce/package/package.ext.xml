@@ -88,12 +88,6 @@
         <file name="Server.xs"/>
         <file name="package.xs"/>
     </package>
-    <package name="ti.sdo.codecs.mpeg2vdec"
-        version="1, 0, 0, 1455116582876"
-        providerId="F:/Releases/rtsc/503">
-        <file name="MPEG2VDEC.xdc"/>
-        <file name="package.xs"/>
-    </package>
     <package name="xdc.bld"
         version="1, 0, 2, 1275003727887"
         providerId="xdccore">
@@ -115,6 +109,12 @@
         version="1, 0, 0, 0, 1275003755582"
         providerId="xdccore">
         <file name="java\package.jar"/>
+    </package>
+    <package name="ti.sdo.codecs.mpeg2vdec"
+        version="1, 0, 0, 1479892116959"
+        providerId="E:/release/rtsc/503">
+        <file name="MPEG2VDEC.xdc"/>
+        <file name="package.xs"/>
     </package>
     <xdcRoot base="E:/ccs4_install/xdctools_3_20_01_42_eng/">
         <file name="/packages/xdc/package.xdc"/>
