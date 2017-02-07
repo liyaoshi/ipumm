@@ -432,7 +432,7 @@ function GetVersionTag()
   Program.global.ducati_ver_mpeg2d = "MPEG2D-01.00.17.01";
   Program.global.ducati_ver_vc1d = "VC1D-01.00.02.05";
   Program.global.ducati_ver_mjpegd = "MJPEGD-01.00.16.01";
-  Program.global.ducati_ver_mjpege = "MJPEGE-01.00.16.01";
+  Program.global.ducati_ver_mjpege = "MJPEGE-01.00.17.01";
   Program.global.ducati_ver_h264e = "H264E-02.00.09.01";
   Program.global.ducati_ver_mpeg4e = "MPEG4E-01.00.02.01";
 
