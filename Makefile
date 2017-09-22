@@ -36,15 +36,15 @@ REPO		:= $(BIOSTOOLSROOT)
 
 # Different tool versions can easily be programmed by defining below variables
 # in your environment.
-XDCVERSION	?= xdctools_3_32_01_22_core
-BIOSVERSION	?= bios_6_46_01_38
-IPCVERSION	?= ipc_3_45_00_00
+XDCVERSION	?= xdctools_3_50_03_33_core
+BIOSVERSION	?= bios_6_52_00_12
+IPCVERSION	?= ipc_3_47_00_00
 CEVERSION	?= codec_engine_3_24_00_08
 FCVERSION	?= framework_components_3_40_02_07
 XDAISVERSION	?= xdais_7_24_00_04
 
 # TI Compiler Settings
-export TMS470CGTOOLPATH ?= $(BIOSTOOLSROOT)/ccsv6/tools/compiler/ti-cgt-arm_5.2.7
+export TMS470CGTOOLPATH ?= $(BIOSTOOLSROOT)/ccsv7/tools/compiler/ti-cgt-arm_16.9.2.LTS
 
 # Define where the sources are
 DUCATIDCEMMSRC	= $(shell pwd)
