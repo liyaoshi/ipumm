@@ -151,6 +151,7 @@ typedef struct {
 
     unsigned long t32k_start;        /* T32K value at the beginning of video decode */
     unsigned long t32k_end;          /* T32K value at the end of video decode */
+    unsigned long t32k_mpu_time;     /* T32K value at MPU side */
 } psi_iva_kpi;
 
 
@@ -513,6 +514,7 @@ void kpi_IVA_profiler_init(void)
 
     iva_kpi.t32k_start        = 0;
     iva_kpi.t32k_end          = 0;
+    iva_kpi.t32k_mpu_time     = 0;
 
 }
 
@@ -547,6 +549,10 @@ void kpi_before_codec(void)
         /* record very 1st time codec is used */
         if( !iva_kpi.t32k_start ) {
             iva_kpi.t32k_start = iva_kpi.before_time;
+            iva_kpi.t32k_mpu_time = 0;  /* before the 1st codec call */
+        } else {
+            /* calculate the time from after codec done (iva_kpi.after_time) until now (iva_kpi.before_time) which is the time on MPU side */
+            iva_kpi.t32k_mpu_time += iva_kpi.before_time - iva_kpi.after_time;
         }
 
         /* calculate delta frame time in ticks */
@@ -661,6 +667,7 @@ void kpi_IVA_profiler_print(void)
 {
     unsigned long    total_time, fps_x100, fps, frtick_x10, Ivatick_x10, Iva_pct, Iva_mhz;
     total_time = fps_x100 = fps = frtick_x10 = Ivatick_x10 = Iva_pct = Iva_mhz = 0;
+    unsigned long    iva_frtick_x10, iva_fps_x100, iva_fps;
 
     /* Calculate the total time */
     total_time = iva_kpi.t32k_end - iva_kpi.t32k_start;
@@ -672,6 +679,10 @@ void kpi_IVA_profiler_print(void)
             frtick_x10 = total_time * 10 / iva_kpi.nb_frames;
             fps_x100 = 32768 * 1000 / frtick_x10;
             fps = fps_x100 / 100;
+
+            iva_frtick_x10 = iva_kpi.ivahd_t_tot * 10 / iva_kpi.nb_frames;
+            iva_fps_x100 = 32768 * 1000 / iva_frtick_x10;
+            iva_fps = iva_fps_x100 / 100;
         }
 
         /* Calculate the IVA load */
@@ -683,15 +694,20 @@ void kpi_IVA_profiler_print(void)
         /* Cakculate the IVA MHz used */
         Iva_mhz = iva_kpi.ivahd_MHzTime / total_time;
 
+        PSI_TracePrintf(TRACEGRP, "\n");
         PSI_TracePrintf(TRACEGRP, "----------------------------------\n");
-        PSI_TracePrintf(TRACEGRP, "Ducati stats:\n");
+        PSI_TracePrintf(TRACEGRP, "M4 stats:\n");
         PSI_TracePrintf(TRACEGRP, "-------------\n");
-        PSI_TracePrintf(TRACEGRP, "      IVA  1st beg: %lu\n", iva_kpi.t32k_start);
-        PSI_TracePrintf(TRACEGRP, "      IVA last end: %lu\n", iva_kpi.t32k_end);
-        PSI_TracePrintf(TRACEGRP, "        Total time: %lu\n", total_time);
-        PSI_TracePrintf(TRACEGRP, " Number of samples: %lu\n", iva_kpi.nb_frames);
-        PSI_TracePrintf(TRACEGRP, " Period of samples: %lu\n", frtick_x10 / 10);
-        PSI_TracePrintf(TRACEGRP, "               fps: %2d.%02d\n", fps, fps_x100 - (fps * 100));
+        PSI_TracePrintf(TRACEGRP, "                 IVA  1st beg: %lu\n", iva_kpi.t32k_start);
+        PSI_TracePrintf(TRACEGRP, "                 IVA last end: %lu\n", iva_kpi.t32k_end);
+        PSI_TracePrintf(TRACEGRP, "            Total time at MPU: %lu\n", iva_kpi.t32k_mpu_time);
+        PSI_TracePrintf(TRACEGRP, "        Total time at IVA (A): %lu\n", iva_kpi.ivahd_t_tot);
+        PSI_TracePrintf(TRACEGRP, "     Total (IVA+MPU) time (B): %lu\n", total_time);
+        PSI_TracePrintf(TRACEGRP, "        Number of samples (C): %lu\n", iva_kpi.nb_frames);
+        PSI_TracePrintf(TRACEGRP, "  IVA period per sample (A/C): %lu\n", iva_frtick_x10 / 10);
+        PSI_TracePrintf(TRACEGRP, "Total period per sample (B/C): %lu\n", frtick_x10 / 10);
+        PSI_TracePrintf(TRACEGRP, "  fps based on total IVA time: %2d.%02d\n", iva_fps, iva_fps_x100 - (iva_fps * 100));
+        PSI_TracePrintf(TRACEGRP, "      fps based on total time: %2d.%02d\n", fps, fps_x100 - (fps * 100));
 
         /* stat existing only if frames were processed */
         if( iva_kpi.nb_frames ) {
@@ -699,12 +715,12 @@ void kpi_IVA_profiler_print(void)
             PSI_TracePrintf(TRACEGRP, "----------------------------------\n");
             PSI_TracePrintf(TRACEGRP, "IVA-HD processing time:\n");
             PSI_TracePrintf(TRACEGRP, "-----------------------\n");
-            PSI_TracePrintf(TRACEGRP, "       IVA average: %d\n", iva_kpi.ivahd_t_tot / iva_kpi.nb_frames);
-            PSI_TracePrintf(TRACEGRP, "           IVA max: %d frame: %d\n", iva_kpi.ivahd_t_max, iva_kpi.ivahd_t_max_frame);
-            PSI_TracePrintf(TRACEGRP, "           IVA min: %d frame: %d\n", iva_kpi.ivahd_t_min, iva_kpi.ivahd_t_min_frame);
-            PSI_TracePrintf(TRACEGRP, "           IVA use: %d %%\n", Iva_pct);
+            PSI_TracePrintf(TRACEGRP, "  IVA average: %d\n", iva_kpi.ivahd_t_tot / iva_kpi.nb_frames);
+            PSI_TracePrintf(TRACEGRP, "      IVA max: %d frame: %d\n", iva_kpi.ivahd_t_max, iva_kpi.ivahd_t_max_frame);
+            PSI_TracePrintf(TRACEGRP, "      IVA min: %d frame: %d\n", iva_kpi.ivahd_t_min, iva_kpi.ivahd_t_min_frame);
+            PSI_TracePrintf(TRACEGRP, "      IVA use: %d %%\n", Iva_pct);
             if (Iva_mhz) {
-                PSI_TracePrintf(TRACEGRP, "           IVA MHz: %d MHz\n\n", Iva_mhz);
+                PSI_TracePrintf(TRACEGRP, "      IVA MHz: %d MHz\n\n", Iva_mhz);
             }
         }
     }
