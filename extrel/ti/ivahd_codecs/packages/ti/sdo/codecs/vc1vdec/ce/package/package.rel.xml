@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--  This file conforms to the DTD xdc/bld/release.dtd -->
-<release name="ti_sdo_codecs_vc1vdec_ce" label="default" date="1471431308914" buildCount="1" producerId="undefined">
+<release name="ti_sdo_codecs_vc1vdec_ce" label="default" date="1514285497907" buildCount="1" producerId="undefined">
 <package name="ti.sdo.codecs.vc1vdec.ce"
     version="1, 0, 0"/>
 <imports>
@@ -21,6 +21,12 @@
         <file name="xdc.tci"/>
         <file name="xmlgen.xs"/>
         <file name="xmlgen2.xs"/>
+    </package>
+    <package name="ti.sdo.codecs.vc1vdec"
+        version="1, 0, 0, 1514285493186"
+        providerId="F:/Rlease_vc1_dec/rtsc">
+        <file name="VC1VDEC.xdc"/>
+        <file name="package.xs"/>
     </package>
     <package name="xdc.platform"
         version="1, 0, 1, 0, 1275003732659"
@@ -103,12 +109,6 @@
         <file name="Utils.xs"/>
         <file name="_gen.xs"/>
         <file name="bld.js"/>
-        <file name="package.xs"/>
-    </package>
-    <package name="ti.sdo.codecs.vc1vdec"
-        version="1, 0, 0, 1471431304190"
-        providerId="E:/release/rtsc">
-        <file name="VC1VDEC.xdc"/>
         <file name="package.xs"/>
     </package>
     <package name="xdc.services.intern.gen"

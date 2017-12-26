@@ -23,7 +23,7 @@
     </TD>
   </TR>
   <TR>
-    <TD><B>Date</B></TD><TD>Fri Aug 12 2016 11:59:39 GMT+0530 (IST)</TD>
+    <TD><B>Date</B></TD><TD>Tue Dec 26 2017 15:34:49 GMT+0530 (IST)</TD>
   </TR>
 
   <TR>
@@ -229,12 +229,12 @@ Determining compiler info.
 
 Chcking if this library was created with a TI compiler...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none "C:\ti\xdais_6_23\report\vc1vdec_ti_host_M3.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "&lt;ti_coff&gt;"
-                   (from "C:\Users\narendra.kc\AppData\Local\Temp\qualiti_runcmd_275908912797851586.sh"
+                   (from "C:\Users\prashanth.ka\AppData\Local\Temp\qualiti_runcmd_43091.sh"
 This library was not  created with a TI compiler.
 
 Attempting to determine library format...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none "C:\ti\xdais_6_23\report\vc1vdec_ti_host_M3.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" -E "&lt;.*coff&gt;|&lt;.*elf&gt;"
-                   (from "C:\Users\narendra.kc\AppData\Local\Temp\qualiti_runcmd_806736009036319429.sh"
+                   (from "C:\Users\prashanth.ka\AppData\Local\Temp\qualiti_runcmd_43092.sh"
   &lt;elf&gt;
   &lt;/elf&gt;
   &lt;elf&gt;
@@ -251,7 +251,7 @@ The library is in ELF format.
 
 Attempting to determine the compiler version...
  Running command:&gt; "find.exe" "GCC:" "C:\ti\xdais_6_23\report\vc1vdec_ti_host_M3.lib"|"C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "GCC:"
-                   (from "C:\Users\narendra.kc\AppData\Local\Temp\qualiti_runcmd_4175352123046379991.sh"
+                   (from "C:\Users\prashanth.ka\AppData\Local\Temp\qualiti_runcmd_43093.sh"
   FIND: Parameter format not correct
 The compiler is UNKNOWN.
 
@@ -263,7 +263,7 @@ The compiler is UNKNOWN.
 Running test 'XDAIS Rules 8, 9 and 10'
 Extracting names of global symbols defined by the algorithm...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\nm6x.exe" -g "C:\ti\xdais_6_23\report\vc1vdec_ti_host_M3.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" " [TBCU] "
-                   (from "C:\Users\narendra.kc\AppData\Local\Temp\qualiti_runcmd_5451776371274049618.sh"
+                   (from "C:\Users\prashanth.ka\AppData\Local\Temp\qualiti_runcmd_43066.sh"
   00000000 U HDVICP20_TI_VDMA_Open_Extmem_SL2
   00000000 U HDVICP20_TI_VDMA_Prepare_Extmem_SL2
   00000000 U HDVICP20_TI_VDMA_Trigger_Extmem_SL2
@@ -347,7 +347,7 @@ and that no blacklisted external references are made
 Running test 'XDAIS Rule 12'
 Extracting names of global BSS data symbols...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\nm6x.exe" -g "C:\ti\xdais_6_23\report\vc1vdec_ti_host_M3.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" " [BD] "
-                   (from "C:\Users\narendra.kc\AppData\Local\Temp\qualiti_runcmd_189906267865218078.sh"
+                   (from "C:\Users\prashanth.ka\AppData\Local\Temp\qualiti_runcmd_43071.sh"
   00000000 D VC1VDEC_TI_version
   00000000 D VC1VDEC_TI_IRES
   00000000 D VC1VDEC_TI_IALG
@@ -380,8 +380,8 @@ Currently, this test cannot be run on non-TI compiled libraries.
 <PRE>
 Running test 'XDAIS Rules 21, 22'
 Using sectti on ofd output to find static data & program memory requirements...
- Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,sections,header "C:\ti\xdais_6_23\report\vc1vdec_ti_host_M3.lib" | "C:\USER_EDIT_THIS_PATH\cg_xml\bin\sectti.exe"
-                   (from "C:\Users\narendra.kc\AppData\Local\Temp\qualiti_runcmd_5705683427829914350.sh"
+ Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,sections,header "C:\ti\xdais_6_23\report\vc1vdec_ti_host_M3.lib" | "C:\Program Files\Texas Instruments\cg_xml\bin\sectti.exe"
+                   (from "C:\Users\prashanth.ka\AppData\Local\Temp\qualiti_runcmd_43084.sh"
   Reading from stdin ...
   ====================================================================
   REPORT FOR LIBRARY: C:/ti/xdais_6_23/report/vc1vdec_ti_host_M3.lib
@@ -481,7 +481,7 @@ Using sectti on ofd output to find static data & program memory requirements...
   .const:VC1VDEC_TI_ICONT2DataSect2 :       4380  0x0000111c  DATA 
   .const:VC1VDEC_TI_ICONT2DataSect3 :       2048  0x00000800  DATA 
   .const:VC1VDEC_TI_ICONT2DataSect4 :       1204  0x000004b4  DATA 
-  .const:VC1VDEC_TI_ICONT2DataSect5 :      11984  0x00002ed0  DATA 
+  .const:VC1VDEC_TI_ICONT2DataSect5 :      11936  0x00002ea0  DATA 
   .const:VC1VDEC_TI_LEVEL1_ICONT1DataSect0 :         32  0x00000020  DATA 
   .const:VC1VDEC_TI_LEVEL1_ICONT1DataSect1 :      32508  0x00007efc  DATA 
   .const:VC1VDEC_TI_LEVEL1_ICONT1DataSect2 :       1088  0x00000440  DATA 
@@ -492,7 +492,7 @@ Using sectti on ofd output to find static data & program memory requirements...
   .const:VC1VDEC_TI_LEVEL1_ICONT2DataSect2 :       4380  0x0000111c  DATA 
   .const:VC1VDEC_TI_LEVEL1_ICONT2DataSect3 :       2048  0x00000800  DATA 
   .const:VC1VDEC_TI_LEVEL1_ICONT2DataSect4 :       1204  0x000004b4  DATA 
-  .const:VC1VDEC_TI_LEVEL1_ICONT2DataSect5 :      11984  0x00002ed0  DATA 
+  .const:VC1VDEC_TI_LEVEL1_ICONT2DataSect5 :      11936  0x00002ea0  DATA 
   .const:VC1VDEC_TI_LEVEL2_ICONT1DataSect0 :         32  0x00000020  DATA 
   .const:VC1VDEC_TI_LEVEL2_ICONT1DataSect1 :      32336  0x00007e50  DATA 
   .const:VC1VDEC_TI_LEVEL2_ICONT1DataSect2 :       1088  0x00000440  DATA 
@@ -503,7 +503,7 @@ Using sectti on ofd output to find static data & program memory requirements...
   .const:VC1VDEC_TI_LEVEL2_ICONT2DataSect2 :       4380  0x0000111c  DATA 
   .const:VC1VDEC_TI_LEVEL2_ICONT2DataSect3 :       2048  0x00000800  DATA 
   .const:VC1VDEC_TI_LEVEL2_ICONT2DataSect4 :       1204  0x000004b4  DATA 
-  .const:VC1VDEC_TI_LEVEL2_ICONT2DataSect5 :      11984  0x00002ed0  DATA 
+  .const:VC1VDEC_TI_LEVEL2_ICONT2DataSect5 :      11936  0x00002ea0  DATA 
   .const:VC1VDEC_TI_LEVEL3_ICONT1DataSect0 :         32  0x00000020  DATA 
   .const:VC1VDEC_TI_LEVEL3_ICONT1DataSect1 :      32404  0x00007e94  DATA 
   .const:VC1VDEC_TI_LEVEL3_ICONT1DataSect2 :       1088  0x00000440  DATA 
@@ -531,7 +531,7 @@ Using sectti on ofd output to find static data & program memory requirements...
   ------------------------------------------------------------
   Totals by section type
   ------------------------------------------------------------
-      Initialized Data :     623710  0x0009845e
+      Initialized Data :     623566  0x000983ce
                   Code :      15314  0x00003bd2
 
 </PRE>
@@ -542,7 +542,7 @@ Using sectti on ofd output to find static data & program memory requirements...
 Running test 'XDAIS Rule 25'
 Using ofd output to parse for endianness attribute...
  Running command:&gt; "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\cgtools\bin\ofd6x.exe" -x --xml_indent=0 --obj_display=none,header "C:\ti\xdais_6_23\report\vc1vdec_ti_host_M3.lib" | "C:\ti\xdais_6_23\packages\ti\xdais\qualiti\bin\grep\grep.exe" "&lt;ei_data&gt;"
-                   (from "C:\Users\narendra.kc\AppData\Local\Temp\qualiti_runcmd_842604312790492900.sh"
+                   (from "C:\Users\prashanth.ka\AppData\Local\Temp\qualiti_runcmd_43089.sh"
   &lt;ei_data&gt;ELFDATA2LSB&lt;/ei_data&gt;
   &lt;ei_data&gt;ELFDATA2LSB&lt;/ei_data&gt;
   &lt;ei_data&gt;ELFDATA2LSB&lt;/ei_data&gt;

@@ -12,12 +12,13 @@ digraph dependencies {
     edge [style=solid, color=blue]
     ti_sdo_ce_video3 [shape=record,label="ti.sdo.ce.video3|1, 0, 0", URL="../E:\prashanth_backup\C_Drive\RTSC_GEN_TOOLS\codec_engine_3_21_00_19\packages\ti\sdo\ce\video3\package/package.rel.svg"];
     ti_sdo_codecs_vc1vdec_ce -> ti_sdo_ce_video3;
-    ti_sdo_codecs_vc1vdec [shape=record,label="ti.sdo.codecs.vc1vdec|1, 0, 0", URL="../E:\release\rtsc\ti\sdo\codecs\vc1vdec\package/package.rel.svg"];
+    ti_sdo_codecs_vc1vdec [shape=record,label="ti.sdo.codecs.vc1vdec|1, 0, 0", URL="../F:\Rlease_vc1_dec\rtsc\ti\sdo\codecs\vc1vdec\package/package.rel.svg"];
     ti_sdo_codecs_vc1vdec_ce -> ti_sdo_codecs_vc1vdec;
 
     edge [style=solid, color=lightgrey]
     xdc [shape=record,label="xdc|1, 1, 1", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\package/package.rel.svg"];
     ti_sdo_codecs_vc1vdec_ce -> xdc;
+    ti_sdo_codecs_vc1vdec_ce -> ti_sdo_codecs_vc1vdec;
     xdc_platform [shape=record,label="xdc.platform|1, 0, 1, 0", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\platform\package/package.rel.svg"];
     ti_sdo_codecs_vc1vdec_ce -> xdc_platform;
     xdc_services_global [shape=record,label="xdc.services.global|1, 0, 0", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\services\global\package/package.rel.svg"];
@@ -39,7 +40,6 @@ digraph dependencies {
     ti_sdo_codecs_vc1vdec_ce -> ti_sdo_ce;
     xdc_bld [shape=record,label="xdc.bld|1, 0, 2", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\bld\package/package.rel.svg"];
     ti_sdo_codecs_vc1vdec_ce -> xdc_bld;
-    ti_sdo_codecs_vc1vdec_ce -> ti_sdo_codecs_vc1vdec;
     xdc_services_intern_gen [shape=record,label="xdc.services.intern.gen|1, 0, 0, 0", URL="../E:\ccs4_install\xdctools_3_20_01_42_eng\packages\xdc\services\intern\gen\package/package.rel.svg"];
     ti_sdo_codecs_vc1vdec_ce -> xdc_services_intern_gen;
 
